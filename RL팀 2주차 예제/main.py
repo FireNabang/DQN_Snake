@@ -34,7 +34,7 @@ def main():
         drawTile()
         drawGrid()
         checkEvents()
-        movePlayer()
+        movePlayer() # 이 함수를 주석 처리하면 방향키로 Agent를 움직일 수 있습니다.
         displayQ()
         checkGame()
         pygame.display.update()
@@ -47,8 +47,6 @@ def init():
     epsilon_discount = 0.95
     learning_rate = 0.8
     discount_factor = 0.9
-    # Sx = randrange(0, WIDTH // TILE_SIZE)
-    # Sy = randrange(0, HEIGHT // TILE_SIZE)
     Sx,Sy = 0,0
     player = Point(Sx, Sy)
     prePlayer = Point()
@@ -80,7 +78,6 @@ def init():
             continue
         env[ty][tx] = 1
         break
-    # env[5][8] = 1
     cnt = 20
     while cnt > 0:
         tx = randrange(0, WIDTH // TILE_SIZE)
