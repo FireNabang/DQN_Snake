@@ -1,0 +1,92 @@
+import numpy as np
+from nn.functions import activations
+
+class Layer(object):
+    def __init__(self, _activations : str):
+        self.params = []
+
+        self.previous_layer = None
+        self.next_layer = None
+
+        self.input = None
+        self.output = None
+        
+        self.input_delta = None
+        self.output_delta = None
+
+        self.activation_function = activations.ActivationFunction(_activations)
+
+    def feed_forward(self):
+        raise NotImplementedError
+    
+    def get_activate(self):
+        return self.activation_function.get_activate(data)
+    
+    def get_activate_diff(self, data):
+        return self.activation_function.get_activate_diff(data)
+    
+    def backpropagation(self):
+        raise NotImplementedError
+
+    def get_accumulated_delta(self):
+        if self.next_layer is not None:
+            return self.next_layer.input_delta
+        else:
+            return self.output_delta
+        
+    def get_input(self):
+        if self.previous_layer is not None:
+            return np.dot(self.weight, self.previous_layer.output) + self.bias
+        else:
+            return np.array(self.input,dtype=np.float32)
+
+    def clear_deltas(self):
+        pass
+
+    def update(self, learning_rate):
+        pass
+    
+    def connect(self, layer):
+        self.previous_layer = layer
+        layer.next_layer = self
+        
+
+    
+    
+class DenseLayer(Layer):
+    def __init__(self, input_dim, output_dim, activations : str):
+
+        super(DenseLayer, self).__init__(activations)
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+
+        self.weight = np.random.randn(output_dim, input_dim)
+        self.bias = np.random.randn(output_dim, 1)
+
+        self.params = [self.weight, self.bias]
+
+        self.delta_w = np.zeros(self.weight.shape)
+        self.delta_b = np.zeros(self.bias.shape)
+        
+
+    def feed_forward(self):
+        self.input = self.get_input()
+        self.output = self.activation_function.get_activate(self.input)
+    def backpropagation(self):
+        data = self.get_input()
+        delta = self.get_accumulated_delta() * self.get_activate_diff(data)
+        
+        
+        self.delta_b += delta
+        self.delta_w += np.dot(delta, self.previous_layer.output.transpose())
+        self.input_delta = np.dot(self.weight.transpose(), delta)
+
+
+    def update(self, learning_rate):
+        self.weight -= learning_rate * self.delta_w
+        self.bias -= learning_rate * self.delta_b
+
+    def clear_deltas(self):
+        self.delta_w = np.zeros(self.weight.shape)
+        self.delta_b = np.zeros(self.bias.shape)
