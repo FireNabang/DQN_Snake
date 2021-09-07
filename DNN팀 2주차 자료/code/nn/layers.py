@@ -73,6 +73,7 @@ class DenseLayer(Layer):
     def feed_forward(self):
         self.input = self.get_input()
         self.output = self.activation_function.get_activate(self.input)
+        
     def backpropagation(self):
         data = self.get_input()
         delta = self.get_accumulated_delta() * self.get_activate_diff(data)

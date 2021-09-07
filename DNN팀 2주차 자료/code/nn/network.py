@@ -46,10 +46,8 @@ class SequentialNetwork:
 
     def train_batch(self, mini_batch, learning_rate):
         for _input,_output in mini_batch:
-            self.input_layer.input = _input
-            self.feed_forward()
-            self.output_layer.output_delta = self.loss.get_loss(self.output_layer.output, _output)
-            self.backpropagation()
+            self.feed_forward(_input)
+            self.backpropagation(_output)
         self.update(mini_batch, learning_rate)
 
         
@@ -65,11 +63,13 @@ class SequentialNetwork:
 
 
 
-    def backpropagation(self):
+    def backpropagation(self, _output):
+        self.output_layer.output_delta = self.loss.get_loss_diff(self.output_layer.output, _output)
         self.output_layer.backpropagation()
         self.hidden_layer.backpropagation()
         
-    def feed_forward(self):
+    def feed_forward(self,_input):
+        self.input_layer.input  = _input
         self.input_layer.feed_forward()
         self.hidden_layer.feed_forward()
         self.output_layer.feed_forward()
@@ -77,7 +77,7 @@ class SequentialNetwork:
 
     def evaluate(self, test_data):
         test_results = [(
-            np.argmax(self.single_forward(x)),
+            np.argmax(self.feed_forward(x)),
             np.argmax(y)
         ) for (x, y) in test_data]
         return sum(int(x == y) for (x, y) in test_results)
