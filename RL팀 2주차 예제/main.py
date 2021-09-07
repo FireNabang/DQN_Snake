@@ -43,6 +43,7 @@ def init():
     pygame.init()
     global  Sx,Sy
     global env,prePlayer, player,Q_Value, epsilon,epsilon_discount,learning_rate,discount_factor
+    # 여기서 파라매터들을 수정해보시길 바랍니다!
     epsilon = 0.99
     epsilon_discount = 0.95
     learning_rate = 0.8
