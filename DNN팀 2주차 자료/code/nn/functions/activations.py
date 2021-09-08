@@ -13,7 +13,7 @@ def none(z):
 
 def ReLU(z):
     result = np.array([max(x,0) for x in z],dtype = np.float32)
-    return r
+    return result
 
 def ReLU_diff(z):
     result = np.array([int(x>0) for x in z],dtype = np.float32)
@@ -26,14 +26,14 @@ def tanh_diff(z):
     return 1 - tanh(z)*tanh(z) 
 
 def sofx_max(z):
-    e = np.exp(x - np.max(x))
+    e = np.exp(z - np.max(z))
     return e / e.sum()
 
 def sofx_max_diff(z):
-    result = np.diag(z)
-    for i in range(len(result)):
-        for j in range(len(result)):
-            result[i][j] = s[i] * (int(i==j) - s[j])
+    result = np.ones((len(z),len(z)), dtype=np.float32 )
+    for i in range(len(z)):
+        for j in range(len(z)):
+            result[i][j] = z[i] * (int(i==j) - z[j])
             
     return result
 
