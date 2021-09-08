@@ -4,6 +4,8 @@ from nn.functions import activations
 class Layer(object):
     def __init__(self, _activations : str):
         self.params = []
+        
+        self.input_shape = None
 
         self.previous_layer = None
         self.next_layer = None
@@ -54,21 +56,17 @@ class Layer(object):
     
     
 class DenseLayer(Layer):
-    def __init__(self, input_dim, output_dim, activations : str):
+    def __init__(self,dim=None,activations = None):
 
         super(DenseLayer, self).__init__(activations)
-
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-
-        self.weight = np.random.randn(output_dim, input_dim)
-        self.bias = np.random.randn(output_dim, 1)
-
+        self.dim = dim
+        
+        self.weight = None
+        self.bias = None
         self.params = [self.weight, self.bias]
 
-        self.delta_w = np.zeros(self.weight.shape)
-        self.delta_b = np.zeros(self.bias.shape)
-        
+        self.delta_w = None
+        self.delta_b = None
 
     def feed_forward(self):
         self.input = self.get_input()
@@ -89,5 +87,15 @@ class DenseLayer(Layer):
         self.bias -= learning_rate * self.delta_b
 
     def clear_deltas(self):
+        self.delta_w = np.zeros(self.weight.shape)
+        self.delta_b = np.zeros(self.bias.shape)
+        
+    def connect(self, layer):
+        super(DenseLayer, self).connect(layer)
+        self.weight = np.random.randn(self.dim, layer.dim)
+        self.bias = np.random.randn(self.dim, 1)
+
+        self.params = [self.weight, self.bias]
+
         self.delta_w = np.zeros(self.weight.shape)
         self.delta_b = np.zeros(self.bias.shape)

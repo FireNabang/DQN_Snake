@@ -55,11 +55,9 @@ class SequentialNetwork:
         learning_rate = learning_rate / len(mini_batch)
         self.output_layer.update(learning_rate)
         self.hidden_layer.update(learning_rate)
-        self.input_layer.update(learning_rate)
         
         self.output_layer.clear_deltas()
         self.hidden_layer.clear_deltas()
-        self.input_layer.clear_deltas()
 
 
 
