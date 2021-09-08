@@ -15,6 +15,8 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
+
+
 clock = pygame.time.Clock()
 grid = pygame.display.set_mode((WIDTH, HEIGHT))
 
@@ -31,11 +33,11 @@ def main():
     init()
     while True:
         clock.tick(20)
-        drawTile()
-        drawGrid()
+        drawTile() # 타일 그리기
+        drawGrid() # 그리드(격자) 그리기
         checkEvents()
         movePlayer() # 이 함수를 주석 처리하면 방향키로 Agent를 움직일 수 있습니다.
-        displayQ()
+        displayQ() # Q값 표시
         checkGame()
         pygame.display.update()
 
@@ -43,12 +45,12 @@ def init():
     pygame.init()
     global  Sx,Sy
     global env,prePlayer, player,Q_Value, epsilon,epsilon_discount,learning_rate,discount_factor
-    # 여기서 파라매터들을 수정해보시길 바랍니다!
-    epsilon = 0.99
+    # 여기서 파라미터들을 수정해보시길 바랍니다!
+    epsilon = 0.99       
     epsilon_discount = 0.95
     learning_rate = 0.8
     discount_factor = 0.9
-    Sx,Sy = 0,0
+    Sx,Sy = 0,0 # player 시작점
     player = Point(Sx, Sy)
     prePlayer = Point()
     Q_Value = []
@@ -64,6 +66,7 @@ def init():
         for j in range(0, WIDTH, TILE_SIZE):
             temp += [0]
         env += [temp]
+        
     while True:
         tx = randrange(0, WIDTH // TILE_SIZE)
         ty = randrange(0, HEIGHT // TILE_SIZE)
@@ -80,6 +83,7 @@ def init():
         env[ty][tx] = 1
         break
     cnt = 20
+    # 랜덤으로 벽을 세워 줍니다
     while cnt > 0:
         tx = randrange(0, WIDTH // TILE_SIZE)
         ty = randrange(0, HEIGHT // TILE_SIZE)
@@ -108,6 +112,9 @@ def drawTile():
                 pygame.draw.rect(grid,GRAY,[j*TILE_SIZE,i*TILE_SIZE,TILE_SIZE,TILE_SIZE])
 
     pygame.draw.rect(grid,BLUE,[player.x*TILE_SIZE,player.y*TILE_SIZE,TILE_SIZE,TILE_SIZE])
+
+    
+# 키보드 입력 처리
 def checkEvents():
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -146,6 +153,7 @@ def checkEvents():
         pygame.quit()
         sys.exit()
 
+        
 def movePlayer():
     if uniform(0, 1) < epsilon:
         nDir = choice(Dir)
@@ -176,10 +184,13 @@ def movePlayer():
 
     updateQ_Value(prePlayer.x,prePlayer.y,nDir)
 
+
+# 자료에 있는 수식을 그대로 코드로 옮겼습니다
 def updateQ_Value(curX,curY,action):
-    Q_Value[curY][curX][action] = (1-learning_rate)*Q_Value[curY][curX][action] + learning_rate*(env[player.y][player.x] + discount_factor * max(Q_Value[player.y][player.x].values()))
+    Q_Value[curY][curX][action] = (1-learning_rate)*Q_Value[curY][curX][action] + learning_rate*(env[player.y][player.x] + discount_factor * max(Q_Value[player.y][player.x].values())) 
 
 
+# 방향에 맞게 Q값을 보여줍니다
 def displayQ():
     font = pygame.font.SysFont("arial", 20, True, False)
 
@@ -203,6 +214,7 @@ def displayQ():
                 grid.blit(text, text_rect)
 
 
+# agent가 -1 or 1에 도착했을경우 epsilon을 감소시키고 시작점으로 돌아갑니다
 def checkGame():
     global epsilon
     if env[player.y][player.x] == -1 or env[player.y][player.x] == 1:
