@@ -21,7 +21,7 @@ class Layer(object):
     def feed_forward(self):
         raise NotImplementedError
     
-    def get_activate(self):
+    def get_activate(self, data):
         return self.activation_function.get_activate(data)
     
     def get_activate_diff(self, data):
