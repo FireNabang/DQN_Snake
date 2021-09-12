@@ -13,8 +13,8 @@ class Layer(object):
         self.input = None
         self.output = None
         
-        self.input_delta = None
-        self.output_delta = None
+        self.accumulated_delta = None
+        self.loss_delta = None
 
         self.activation_function = activations.ActivationFunction(_activations)
 
@@ -32,9 +32,9 @@ class Layer(object):
 
     def get_accumulated_delta(self):
         if self.next_layer is not None:
-            return self.next_layer.input_delta
+            return self.next_layer.accumulated_delta
         else:
-            return self.output_delta
+            return self.loss_delta
         
     def get_input(self):
         if self.previous_layer is not None:
@@ -71,15 +71,19 @@ class DenseLayer(Layer):
     def feed_forward(self):
         self.input = self.get_input()
         self.output = self.activation_function.get_activate(self.input)
-        
     def backpropagation(self):
         data = self.get_input()
-        delta = self.get_accumulated_delta() * self.get_activate_diff(data)
-        
+        accumulated_delta = self.get_accumulated_delta()
+        activate_diff = self.get_activate_diff(data)
+
+        if self.next_layer is None and (accumulated_delta.shape != activate_diff.shape) :
+            delta = np.dot(activate_diff.transpose(), accumulated_delta)
+        else:
+            delta = accumulated_delta * activate_diff
         
         self.delta_b += delta
         self.delta_w += np.dot(delta, self.previous_layer.output.transpose())
-        self.input_delta = np.dot(self.weight.transpose(), delta)
+        self.accumulated_delta = np.dot(self.weight.transpose(), delta)
 
 
     def update(self, learning_rate):
