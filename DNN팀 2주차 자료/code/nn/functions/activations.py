@@ -12,12 +12,13 @@ def none(z):
     return z
 
 def ReLU(z):
-    result = np.array([max(x,0) for x in z],dtype = np.float32)
-    return result
+    l = [max(x,0) for x in z]
+    result = np.array(l,dtype = np.float32)
+    return result.reshape(z.shape)
 
 def ReLU_diff(z):
     result = np.array([int(x>0) for x in z],dtype = np.float32)
-    return result
+    return result.reshape(z.shape)
 
 def tanh(z):
     return 2*sigmoid(2*np.array(z)) - 1

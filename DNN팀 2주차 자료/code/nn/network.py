@@ -1,7 +1,8 @@
-from six.moves import range
 import random
 import numpy as np
 from nn.functions import loss
+
+import multiprocessing as mp
 
 class SequentialNetwork:
     def __init__(self, _loss=None):
@@ -11,43 +12,25 @@ class SequentialNetwork:
         else :
             self.loss = loss.Loss(_loss)
 
-    
-    #def set_hidden_layer(self, layer):
-    #    self.hidden_layer = layer
-        
-    #def set_input_layer(self, layer):
-    #    self.input_layer = layer
-        
-    #def set_output_layer(self, layer):
-    #    self.output_layer = layer
-
-    def set_layer (self, layer) :
+    def add_layer (self, layer) :
         if self.input_layer is None : 
             self.input_layer = layer;
             self.output_layer = layer;
 
         else :
-
-            """temp_layer = self.input_layer
-            #print(type(temp_layer));
-            while True : 
-                if temp_layer.next_layer is None :
-                    break
-                temp_layer = temp_layer.next_layer"""
-            
             layer.connect(self.output_layer);
             self.output_layer = layer;  
     
     def train(self, training_data, epochs, mini_batch_size,learning_rate, test_data=None):
         n = len(training_data)
-        
         for epoch in range(epochs):
             random.shuffle(training_data)
             mini_batches = [training_data[k:k + mini_batch_size] for k in range(0, n, mini_batch_size)]
-
+            
             for mini_batch in mini_batches:
                 self.train_batch(mini_batch, learning_rate)
-
+            
+            
             if test_data:
                 n_test = len(test_data)
                 print("Epoch {0}: {1} / {2}"
@@ -56,43 +39,47 @@ class SequentialNetwork:
                 print("Epoch {0} complete".format(epoch))
 
     def train_batch(self, mini_batch, learning_rate):
-        for _input,_output in mini_batch:
-            self.feed_forward(_input)
-            self.backpropagation(_output)
+        pool = mp.Pool(mp.cpu_count());
+        pool.map(self.sub_train,mini_batch)
+        # for _input,_output in mini_batch:
+        #     self.feed_forward(_input)
+        #     self.backpropagation(_output)
+        pool.close();
+        pool.join();
         self.update(mini_batch, learning_rate)
-
+        
+    def sub_train(self,data):
+        self.feed_forward(data[0])
+        self.backpropagation(data[1])
         
     def update(self, mini_batch, learning_rate):
         learning_rate = learning_rate / len(mini_batch)
         temp_layer = self.output_layer
         while True :
             temp_layer.update(learning_rate)
-            if temp_layer is self.input_layer.next_layer : 
-                break;
             temp_layer = temp_layer.previous_layer
-        
+            if temp_layer is self.input_layer : 
+                break;
         temp_layer = self.output_layer
         while True :
             temp_layer.clear_deltas()
-            if temp_layer is self.input_layer.next_layer : 
-                break;
             temp_layer = temp_layer.previous_layer
-    
+            if temp_layer is self.input_layer : 
+                break;
+        
 
 
     def backpropagation(self, _output):
-        self.output_layer.output_delta = self.loss.get_loss_diff(self.output_layer.output, _output)
+        self.output_layer.loss_delta = self.loss.get_loss_diff(self.output_layer.output, _output)
         
         temp_layer = self.output_layer;
         while True :
             temp_layer.backpropagation()
-            if temp_layer is self.input_layer.next_layer : 
-                break;
             temp_layer = temp_layer.previous_layer
-      
-        #self.output_layer.backpropagation()
-        #self.hidden_layer.backpropagation()
-        
+            if temp_layer is self.input_layer : 
+                break;
+    
+    
     def feed_forward(self,_input):
         self.input_layer.input  = _input
         temp_layer = self.input_layer;
@@ -101,9 +88,6 @@ class SequentialNetwork:
                 break;
             temp_layer.feed_forward()
             temp_layer = temp_layer.next_layer
-        #self.input_layer.feed_forward()
-        #self.hidden_layer.feed_forward()
-        #self.output_layer.feed_forward()
         return self.output_layer.output
 
     def evaluate(self, test_data):
