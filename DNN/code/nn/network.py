@@ -2,7 +2,6 @@ import random
 import numpy as np
 from nn.functions import loss
 
-import multiprocessing as mp
 
 class SequentialNetwork:
     def __init__(self, _loss=None):
@@ -39,18 +38,11 @@ class SequentialNetwork:
                 print("Epoch {0} complete".format(epoch))
 
     def train_batch(self, mini_batch, learning_rate):
-        pool = mp.Pool(mp.cpu_count());
-        pool.map(self.sub_train,mini_batch)
-        # for _input,_output in mini_batch:
-        #     self.feed_forward(_input)
-        #     self.backpropagation(_output)
-        pool.close();
-        pool.join();
+        for _input,_output in mini_batch:
+            self.feed_forward(_input)
+            self.backpropagation(_output)
         self.update(mini_batch, learning_rate)
         
-    def sub_train(self,data):
-        self.feed_forward(data[0])
-        self.backpropagation(data[1])
         
     def update(self, mini_batch, learning_rate):
         learning_rate = learning_rate / len(mini_batch)
