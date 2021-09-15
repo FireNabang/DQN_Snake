@@ -2,6 +2,8 @@ import numpy as np
 
 
 def sigmoid(z):
+    z = np.array(z,dtype = np.float128)
+    z = np.clip(z, -709.78, 709.78)
     return np.reciprocal(np.add(1.0, np.exp(-z)))
 
 
@@ -13,11 +15,11 @@ def none(z):
 
 def ReLU(z):
     l = [max(x,0) for x in z]
-    result = np.array(l,dtype = np.float32)
+    result = np.array(l,dtype = np.float128)
     return result.reshape(z.shape)
 
 def ReLU_diff(z):
-    result = np.array([int(x>0) for x in z],dtype = np.float32)
+    result = np.array([int(x>0) for x in z],dtype = np.float128)
     return result.reshape(z.shape)
 
 def tanh(z):
@@ -27,11 +29,13 @@ def tanh_diff(z):
     return 1 - tanh(z)*tanh(z) 
 
 def sofx_max(z):
+    z = np.array(z,dtype = np.float128)
+    z = np.clip(z, -709.78, 709.78)
     e = np.exp(z - np.max(z))
     return e / e.sum()
 
 def sofx_max_diff(z):
-    result = np.ones((len(z),len(z)), dtype=np.float32 )
+    result = np.ones((len(z),len(z)), dtype=np.float128 )
     for i in range(len(z)):
         for j in range(len(z)):
             result[i][j] = z[i] * (int(i==j) - z[j])

@@ -40,7 +40,7 @@ class Layer(object):
         if self.previous_layer is not None:
             return np.dot(self.weight, self.previous_layer.output) + self.bias
         else:
-            return np.array(self.input,dtype=np.float32)
+            return np.array(self.input,dtype=np.float128)
 
     def clear_deltas(self):
         pass
