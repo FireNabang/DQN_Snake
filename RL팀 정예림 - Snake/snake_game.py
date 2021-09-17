@@ -5,7 +5,7 @@ import os, sys
 
 ARRAY_SIZE = 50
 
-DIRECTIONS = {
+DIRECTIONS = { # 방향
     "LEFT": (-1, 0),
     "RIGHT": (1, 0),
     "UP": (0, 1),
@@ -14,30 +14,34 @@ DIRECTIONS = {
 
 snake, fruit = None, None
 
-def init():
+def init(): # 초기화
     global snake
-    snake = [ (0, 2), (0, 1), (0, 0) ]
+    snake = [ (0, 2), (0, 1), (0, 0) ] # 길이가 3짜리인 snake
 
-    place_fruit((ARRAY_SIZE // 2, ARRAY_SIZE // 2))
+    place_fruit((ARRAY_SIZE // 2, ARRAY_SIZE // 2)) # 중간 지점에 fruit 배치하기
 
-def place_fruit(coord=None):
+def place_fruit(coord=None): # fruit 위치를 결정하는 함수
     global fruit
-    if coord:
-        fruit = coord
+    if coord: # 만약 파라미터로 fruit의 좌표가 주어진 경우라면
+        fruit = coord # 그 좌표를 fruit의 위치로 설정
         return
 
-    while True:
-        x = randint(0, ARRAY_SIZE-1)
-        y = randint(0, ARRAY_SIZE-1)
-        if (x, y) not in snake:
-           fruit = x, y
+    while True: # 위에서 return 되지 않았다는 건 fruit 좌표가 파라미터로 주어지지 않았다는 것
+        x = randint(0, ARRAY_SIZE-1) # fruit의 x 좌표를 임의로 선택
+        y = randint(0, ARRAY_SIZE-1) # fruit의 y 좌표를 임의로 선택
+        # 근데 snake 몸이랑 겹치는 곳에 fruit을 놓으면 안되니까 while문 돌면서 안 겹치는 좌표 찾기
+        if (x, y) not in snake: # snake랑 안 겹치는 fruit 좌표 찾으면
+           fruit = x, y # 그 좌표를 fruit의 위치로 설정
            return
 
 def step(direction):
-    old_head = snake[0]
-    movement = DIRECTIONS[direction]
-    new_head = (old_head[0]+movement[0], old_head[1]+movement[1])
+    old_head = snake[0] # 기존 뱀의 머리. 예) 위의 snake = [ (0, 2), (0, 1), (0, 0) ] 라면 snake[0] = (0, 2)
+    movement = DIRECTIONS[direction] # 상하좌우 중 하나. 예) (0 , 1)
+    new_head = (old_head[0]+movement[0], old_head[1]+movement[1]) # 기존 뱀의 머리 + 방향 = 새로운 뱀의 머리
+                                                                  # 예) (0 + 0, 2 + 1) = (0, 3) : UP!
 
+    print("new_head: " + new_head)
+    # game over : 이동한 new 뱀의 머리가 화면 밖으로 나가거나, 자기 자신의 몸에 닿은 경우
     if (
             new_head[0] < 0 or
             new_head[0] >= ARRAY_SIZE or
@@ -51,8 +55,7 @@ def step(direction):
         place_fruit()
     else:
         tail = snake[-1]
-        for i in range(10): #속도조절용..ㅋㅋ
-            print()
+        print(snake[-1])
         del snake[-1]
 
     snake.insert(0, new_head)
