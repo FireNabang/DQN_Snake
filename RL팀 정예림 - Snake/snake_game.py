@@ -51,6 +51,8 @@ def step(direction):
         place_fruit()
     else:
         tail = snake[-1]
+        for i in range(10): #속도조절용..ㅋㅋ
+            print()
         del snake[-1]
 
     snake.insert(0, new_head)
@@ -84,7 +86,7 @@ def test():
     assert snake == [(0, 4), (0, 3), (0, 2), (0, 1)]
     assert fruit != (0, 4)
 
-    assert not step('DOWN'), 'Kdyz nacouvam do sebe, umru!'
+    assert not step('DOWN'), 'noo!'
 
 DIRS = ['UP', 'RIGHT', 'DOWN', 'LEFT']
 
