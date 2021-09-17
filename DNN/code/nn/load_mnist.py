@@ -3,7 +3,6 @@ import gzip
 import numpy as np
 
 
-
 def encode_label(j):
     e = np.zeros((10, 1))
     e[j] = 1.0
@@ -21,3 +20,5 @@ def load_data():
         data.encoding = 'latin1'
         train_data, validation_data, test_data = data.load()
     return shape_data(train_data), shape_data(test_data)
+
+
