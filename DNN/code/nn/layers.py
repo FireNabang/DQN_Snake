@@ -141,11 +141,11 @@ class Conv2DLayer (Layer) :
         img = np.pad(self.previous_layer.output, [(0,0), (0,0), (self.pad, self.pad), (self.pad, self.pad)], 'constant')
         if self.previous_layer is not None:
             result = np.array([np.zeros((self.input_height,self.output_width)) for _ in range(self.input_count)], dtype = np.float128)
-        for pre_output_cnt in range(self.previous_layer.output_count):
-            for filter_cnt in range(self.filter_count):
-                for m in range(0,self.input_width,self.stride):
-                    for n in range(0,self.input_height,self.stride):
-                        self.input[pre_output_cnt * self.filter_count + filter_cnt][n][m] += self.weight[filter_cnt][n][m] * img[m][n] + self.bias[filter_count]
+            for pre_output_cnt in range(self.previous_layer.output_count):
+                for filter_cnt in range(self.filter_count):
+                    for m in range(0,self.input_width,self.stride):
+                        for n in range(0,self.input_height,self.stride):
+                            self.input[pre_output_cnt * self.filter_count + filter_cnt][n][m] += self.weight[filter_cnt][n][m] * img[m][n] + self.bias[filter_count]
 
             return result
         else:
@@ -181,10 +181,12 @@ class Conv2DLayer (Layer) :
 # Conv -> Fully Connected Layer
 
 class MaxPooling2DLayer(Layer):
-    def __init__(self,dim=None,activations = None):
+    def __init__(self,pool_size=(2,2),activations = None):
 
         super(DenseLayer, self).__init__(activations)
-        self.dim = dim
+        self.pool_size = pool_size
+        self.pool_height = pool_size[0]
+        self.pool_width = pool_size[1]
         
         self.weight = None
         self.bias = None
@@ -192,9 +194,21 @@ class MaxPooling2DLayer(Layer):
 
         self.delta_w = None
         self.delta_b = None
+        
+    def get_input(self):
+        if self.previous_layer is not None:
+            return self.previous_layer.output
+        else:
+            return None
 
     def feed_forward(self):
         self.input = self.get_input()
+        self.output_height = (self.previous_layer.output_height  - self.pool_height )
+        self.output_width =  (self.previous_layer.output_width  - self.pool_widht)
+        for pre_output_cnt in range(self.previous_layer.output_count):
+                for m in range(self.output_width-1):
+                    for n in range(self.output_height-1):
+                        self.output[pre_output_cnt][n][m] += max(self.input[n][m],self.input[n+1][m],self.input[n][m+1],self.input[n+1][m+1])
         self.output = self.activation_function.get_activate(self.input)
         
     def backpropagation(self):
@@ -237,16 +251,20 @@ class FlattenLayer(Layer):
         super(DenseLayer, self).__init__(activations)
         self.dim = dim
         
-        self.weight = None
-        self.bias = None
         self.params = [self.weight, self.bias]
 
         self.delta_w = None
         self.delta_b = None
-
+        
+    def get_input(self):
+        if self.previous_layer is not None:
+            return self.previous_layer.output
+        else:
+            return None
     def feed_forward(self):
         self.input = self.get_input()
-        self.output = self.activation_function.get_activate(self.input)
+        self.output = self.input.reshape(self.previous_layer.output_width * self.previous_layer.output_height * self.previous_layer.output_count,-1)
+        
     def backpropagation(self):
         data = self.get_input()
         accumulated_delta = self.get_accumulated_delta()
@@ -257,10 +275,9 @@ class FlattenLayer(Layer):
         else:
             delta = accumulated_delta * activate_diff
         
-        self.delta_b += delta
-        self.delta_w += np.dot(delta, self.previous_layer.output.transpose())
         self.accumulated_delta = np.dot(self.weight.transpose(), delta)
 
+    '''
     def im2col(self) :
 
         filter_count, channel, filter_height , filter_width = self.weight.shape
@@ -279,21 +296,13 @@ class FlattenLayer(Layer):
                 col[:, :, y, x, :, :] = img[:, :, y:y_max:self.stride, x:x_max:self.stride]
             col = col.transpose(0, 4, 5, 1, 2, 3).reshape(input_count*output_height*output_width, -1)
         return col
+        '''
 
     def update(self, learning_rate):
-        self.weight -= learning_rate * self.delta_w
-        self.bias -= learning_rate * self.delta_b
+        pass
 
     def clear_deltas(self):
-        self.delta_w = np.zeros(self.weight.shape)
-        self.delta_b = np.zeros(self.bias.shape)
+        pass
         
     def connect(self, layer):
         super(DenseLayer, self).connect(layer)
-        self.weight = np.random.randn(self.dim, layer.dim)
-        self.bias = np.random.randn(self.dim, 1)
-
-        self.params = [self.weight, self.bias]
-
-        self.delta_w = np.zeros(self.weight.shape)
-        self.delta_b = np.zeros(self.bias.shape)
