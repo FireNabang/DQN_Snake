@@ -131,7 +131,7 @@ class Conv2DLayer (Layer) :
         self.input_count = None
         
         self.weight = np.array([np.random.randn(filter_size[0],filter_size[1]) for _ in range(filter_count)], dtype  = np.float128)
-        self.bias = np.array([np.random.randn(1,1) for _ in range(filter_count)], dtype = np.float128)
+        self.bias = np.array([np.random.randn(1,1) for _ in range(filter_count)], dtype = np.float128) 
         self.params = [self.weight, self.bias]
         self.delta_w = None
         self.delta_b = None
@@ -140,7 +140,7 @@ class Conv2DLayer (Layer) :
     def get_input(self):
         img = np.pad(self.previous_layer.output, [(0,0), (0,0), (self.pad, self.pad), (self.pad, self.pad)], 'constant')
         if self.previous_layer is not None:
-            result = np.array([np.zeros((self.input_height,self.output_width)) for _ range(self.input_count)], dtype = np.float128)
+            result = np.array([np.zeros((self.input_height,self.output_width)) for _ in range(self.input_count)], dtype = np.float128)
         for pre_output_cnt in range(self.previous_layer.output_count):
             for filter_cnt in range(self.filter_count):
                 for m in range(0,self.input_width,self.stride):
@@ -154,7 +154,7 @@ class Conv2DLayer (Layer) :
 
     def feed_forward(self):
         self.input_height = (self.previous_layer.output_height  + 2 * self.pad - self.filter_height ) // self.stride + 1
-        self.input_width=  (self.previous_layer.output_width + 2 * self.pad - self.filter_width) // self.stride + 1
+        self.input_width =  (self.previous_layer.output_width + 2 * self.pad - self.filter_width) // self.stride + 1
         self.input = self.get_input();
         self.ouptut = self.activation_function.get_activate(self.input)
 
