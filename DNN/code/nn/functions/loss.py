@@ -13,7 +13,7 @@ def binary_crossentropy(predictions, labels):
     return -(labels * np.log(predictions + delta) + (1-y)*np.log(1-predictions + delta)).mean()
 
 def binary_crossentropy_diff(predictions, labels):
-    return -labels/(predictions + delta) +(1-y)/(1-predictions + delta)     
+    return -labels/(predictions + delta) +(1-labels)/(1-predictions + delta)     
 
 def categorical_crossentropy(predictions, labels):
     return -sum(labels * np.log(predictions + delta))
