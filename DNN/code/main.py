@@ -11,7 +11,9 @@ def main():
 
     model.add_layer(DenseLayer(784,'none'))
     model.add_layer(DenseLayer(392,'sigmoid'))
-    # model.add_layer(DenseLayer(196,'sigmoid'))
+    model.add_layer(DenseLayer(196,'sigmoid'))
+    model.add_layer(DenseLayer(64,'sigmoid'))
+    model.add_layer(DenseLayer(32,'sigmoid'))
     model.add_layer(DenseLayer(10,'sigmoid'))
     #optimizer = Optimizer.Momentum();
 

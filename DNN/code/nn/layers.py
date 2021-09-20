@@ -82,6 +82,7 @@ class DenseLayer(Layer):
         data = self.get_input()
         accumulated_delta = self.get_accumulated_delta()
         activate_diff = self.get_activate_diff(data)
+        # print(accumulated_delta)
 
         if self.next_layer is None and (accumulated_delta.shape != activate_diff.shape) :
             delta = np.dot(activate_diff.transpose(), accumulated_delta)
@@ -114,7 +115,7 @@ class DenseLayer(Layer):
 
 class Conv2DLayer (Layer) :
     def __init__(self,filter_count, filter_size, pad, activations = None,stride=1,input_size = (1,1)) :
-        super(Conv2D, self).__init__(activations)  
+        super(Conv2DLayer, self).__init__(activations)  
         self.stride = stride
         
         self.filter_height = filter_size[1]
@@ -127,8 +128,8 @@ class Conv2DLayer (Layer) :
         self.output_height = None 
         self.output_width = None
         
-        self.output_count = None
-        self.input_count = None
+        self.output_channel = None
+        self.input_channel = None
         
         self.weight = np.array([np.random.randn(filter_size[0],filter_size[1]) for _ in range(filter_count)], dtype  = np.float128)
         self.bias = np.array([np.random.randn(1,1) for _ in range(filter_count)], dtype = np.float128) 
@@ -140,12 +141,12 @@ class Conv2DLayer (Layer) :
     def get_input(self):
         img = np.pad(self.previous_layer.output, [(0,0), (0,0), (self.pad, self.pad), (self.pad, self.pad)], 'constant')
         if self.previous_layer is not None:
-            result = np.array([np.zeros((self.input_height,self.output_width)) for _ in range(self.input_count)], dtype = np.float128)
-            for pre_output_cnt in range(self.previous_layer.output_count):
+            result = np.array([np.zeros((self.input_height,self.output_width)) for _ in range(self.input_channel)], dtype = np.float128)
+            for pre_output_ch in range(self.previous_layer.output_channel):
                 for filter_cnt in range(self.filter_count):
                     for m in range(0,self.input_width,self.stride):
                         for n in range(0,self.input_height,self.stride):
-                            self.input[pre_output_cnt * self.filter_count + filter_cnt][n][m] += self.weight[filter_cnt][n][m] * img[m][n] + self.bias[filter_count]
+                            self.input[pre_output_ch * self.filter_count + filter_cnt][n][m] += self.weight[filter_cnt][n][m] * img[m][n] + self.bias[filter_cnt]
 
             return result
         else:
@@ -174,8 +175,8 @@ class Conv2DLayer (Layer) :
                               
     def connect(self, layer):
         super(Conv2DLayer, self).connect(layer)
-        self.input_count = layer.output_count
-        self.output_count = self.input_count * self.filter_count
+        self.input_channel = layer.output_channel
+        self.output_channel = self.input_channel * self.filter_count
 
 
 # Conv -> Fully Connected Layer
@@ -183,7 +184,7 @@ class Conv2DLayer (Layer) :
 class MaxPooling2DLayer(Layer):
     def __init__(self,pool_size=(2,2),activations = None):
 
-        super(DenseLayer, self).__init__(activations)
+        super(MaxPooling2DLayer, self).__init__(activations)
         self.pool_size = pool_size
         self.pool_height = pool_size[0]
         self.pool_width = pool_size[1]
@@ -197,18 +198,20 @@ class MaxPooling2DLayer(Layer):
         
     def get_input(self):
         if self.previous_layer is not None:
-            return self.previous_layer.output
+            temp = self.previous_layer.output
+            result = np.zeros(self.input_channel, self.input_height, self.input_width)
+            for pre_output_ch in range(self.previous_layer.output_channel):
+                    for m in range(self.input_width):
+                        for n in range(self.input_height):
+                            result[pre_output_ch][n][m] += max(temp[pre_output_ch][n][m],temp[pre_output_ch][n+1][m],temp[pre_output_ch][n][m+1],temp[pre_output_ch][n+1][m+1])
+            return result
         else:
             return None
 
     def feed_forward(self):
+        self.input_height = (self.previous_layer.output_height  - self.pool_height)
+        self.input_width =  (self.previous_layer.output_width  - self.pool_widht)
         self.input = self.get_input()
-        self.output_height = (self.previous_layer.output_height  - self.pool_height )
-        self.output_width =  (self.previous_layer.output_width  - self.pool_widht)
-        for pre_output_cnt in range(self.previous_layer.output_count):
-                for m in range(self.output_width-1):
-                    for n in range(self.output_height-1):
-                        self.output[pre_output_cnt][n][m] += max(self.input[n][m],self.input[n+1][m],self.input[n][m+1],self.input[n+1][m+1])
         self.output = self.activation_function.get_activate(self.input)
         
     def backpropagation(self):
@@ -263,7 +266,7 @@ class FlattenLayer(Layer):
             return None
     def feed_forward(self):
         self.input = self.get_input()
-        self.output = self.input.reshape(self.previous_layer.output_width * self.previous_layer.output_height * self.previous_layer.output_count,-1)
+        self.output = self.input.reshape(self.previous_layer.output_width * self.previous_layer.output_height * self.previous_layer.output_channel,-1)
         
     def backpropagation(self):
         data = self.get_input()
@@ -281,20 +284,20 @@ class FlattenLayer(Layer):
     def im2col(self) :
 
         filter_count, channel, filter_height , filter_width = self.weight.shape
-        input_count, channel, input_height, input_width = self.input.shape
+        input_channel, channel, input_height, input_width = self.input.shape
 
         output_height = int((input_height +2*self.pad -filter_height )/self.stride)+1
         output_width= int ((input_width + 2*self.pad- filter_width)/self.stride)+1
 
         img = np.pad(self.input, [(0,0), (0,0), (self.pad, self.pad), (self.pad, self.pad)], 'constant')
-        col = np.zeros((input_count, channel, filter_height, filter_width, output_height, output_width))
+        col = np.zeros((input_channel, channel, filter_height, filter_width, output_height, output_width))
 
         for y in range(filter_height):
             y_max = y + self.stride*output_height
             for x in range(filter_width):
                 x_max = x + self.stride*output_width
                 col[:, :, y, x, :, :] = img[:, :, y:y_max:self.stride, x:x_max:self.stride]
-            col = col.transpose(0, 4, 5, 1, 2, 3).reshape(input_count*output_height*output_width, -1)
+            col = col.transpose(0, 4, 5, 1, 2, 3).reshape(input_channel*output_height*output_width, -1)
         return col
         '''
 
