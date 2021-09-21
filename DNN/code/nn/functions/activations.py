@@ -28,17 +28,18 @@ def tanh(z):
 def tanh_diff(z):
     return 1 - tanh(z)*tanh(z) 
 
-def sofx_max(z):
+def soft_max(z):
     z = np.array(z,dtype = np.float128)
     z = np.clip(z, -709.78, 709.78)
-    e = np.exp(z - np.max(z))
-    return e / e.sum()
+    e = np.exp(z)
+    return e / np.sum(e, dtype=np.float128)
 
-def sofx_max_diff(z):
-    result = np.ones((len(z),len(z)), dtype=np.float128 )
-    for i in range(len(z)):
-        for j in range(len(z)):
-            result[i][j] = z[i] * (int(i==j) - z[j])
+def soft_max_diff(z):
+    s = soft_max(z)
+    result = np.ones((len(s),len(s)), dtype=np.float128 )
+    for i in range(len(s)):
+        for j in range(len(s)):
+            result[i][j] = s[i] * (int(i==j) - s[j])
             
     return result
 
@@ -48,7 +49,7 @@ activations = {
     'sigmoid': sigmoid,
     'tanh' : tanh,
     'relu' : ReLU,
-    'softmax' : sofx_max
+    'softmax' : soft_max
     
 }
 
@@ -57,7 +58,7 @@ activations_diff = {
     'sigmoid': sigmoid_diff,
     'tanh' : tanh_diff,
     'relu' : ReLU_diff,
-    'softmax' : sofx_max_diff
+    'softmax' : soft_max_diff
 }
 
 class ActivationFunction:
