@@ -11,10 +11,11 @@ def main():
 
     model.add_layer(DenseLayer(784,'none'))
     model.add_layer(DenseLayer(392,'sigmoid'))
+    model.add_layer(DenseLayer(196,'sigmoid'))
     model.add_layer(DenseLayer(10,'sigmoid'))
     #optimizer = Optimizer.Momentum();
 
-    model.train(training_data, epochs=3, mini_batch_size=10, learning_rate=6.0, test_data=test_data)
+    model.train(training_data, epochs=3, mini_batch_size=10, learning_rate=3.0, test_data=test_data)
 
 
 if __name__ == '__main__':

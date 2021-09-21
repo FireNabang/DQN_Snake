@@ -225,7 +225,11 @@ class MaxPooling2DLayer(Layer):
         for ch in range(self.channel):
             for n in range(self.input_height):
                 for m in range(self.input_width):
-                    delta[ch][n][m] += accumulated_delta[ch][n][m] * int(self.input[ch][n][m] == max([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)]))
+                    M = max([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)])
+                    for i in range(self.pool_height):
+                        for j in range(self.pool_width):
+                            if self.input[ch][n + i][m + j] == M:
+                                delta[ch][n + i][m + j] += accumulated_delta[ch][n][m]
                     
         
         self.accumulated_delta = delta
@@ -285,7 +289,11 @@ class AvgPooling2DLayer(Layer):
         for ch in range(self.channel):
             for n in range(self.input_height):
                 for m in range(self.input_width):
-                    delta[ch][n][m] += accumulated_delta[ch][n][m] * sum([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)]) / (self.pool_height * self.pool_width)
+                    d = accumulated_delta[ch][n][m] * sum([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)]) / (self.pool_height * self.pool_width)
+                    delta[ch][n][m]   += d
+                    delta[ch][n+1][m] += d
+                    delta[ch][n][m+1] += d
+                    delta[ch][n+1][m+1] += d
                     
         
         self.accumulated_delta = delta
@@ -319,19 +327,11 @@ class FlattenLayer(Layer):
             return None
     def feed_forward(self):
         self.input = self.get_input()
-        self.output = self.input.reshape(self.previous_layer.output_width * self.previous_layer.output_height * self.previous_layer.output_channel,-1)
+        self.output = self.input.reshape(self.previous_layer.output_width * self.previous_layer.output_height * self.previous_layer.output_channel,1)
         
     def backpropagation(self):
-        data = self.get_input()
         accumulated_delta = self.get_accumulated_delta()
-        activate_diff = self.get_activate_diff(data)
-
-        if self.next_layer is None and (accumulated_delta.shape != activate_diff.shape) :
-            delta = np.dot(activate_diff.transpose(), accumulated_delta)
-        else:
-            delta = accumulated_delta * activate_diff
-        
-        self.accumulated_delta = np.dot(self.weight.transpose(), delta)
+        self.accumulated_delta = accumulated_delta.reshape(self.input.reshape)
 
     '''
     def im2col(self) :
