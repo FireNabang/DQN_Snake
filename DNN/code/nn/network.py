@@ -12,7 +12,7 @@ class SequentialNetwork:
             self.loss = loss.Loss(_loss)
 
     def add_layer(self, layer):
-        if self.input_layer is None: 
+        if self.input_layer is None:
             self.input_layer = layer
             self.output_layer = layer
 
@@ -70,6 +70,7 @@ class SequentialNetwork:
         self.input_layer.input = _input
         temp_layer = self.input_layer
         while True:
+            print('check')
             if temp_layer is None:
                 break
             temp_layer.feed_forward()
