@@ -12,6 +12,7 @@ def sigmoid_diff(z):
 
 
 def none(z):
+    z = np.array(z, dtype=np.float128)
     return z
 
 

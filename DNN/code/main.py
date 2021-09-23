@@ -1,16 +1,21 @@
 from nn import load_mnist
 from nn import network
-from nn.layers import DenseLayer
+from nn.layers import DenseLayer, Conv2DLayer, MaxPooling2DLayer, FlattenLayer
 
 
 def main():
-    training_data, test_data = load_mnist.load_data()
+    training_data, test_data = load_mnist.load_data('matrix')
 
     model = network.SequentialNetwork()
 
-    model.add_layer(DenseLayer(784, 'none'))
-    model.add_layer(DenseLayer(392, 'sigmoid'))
-    model.add_layer(DenseLayer(196, 'sigmoid'))
+    model.add_layer(Conv2DLayer(input_size=(28, 28, 1)))
+    model.add_layer(MaxPooling2DLayer())
+    model.add_layer(Conv2DLayer(filter_count=10, filter_size=(2, 2)))
+    model.add_layer(MaxPooling2DLayer())
+    model.add_layer(Conv2DLayer(filter_count=10, filter_size=(2, 2)))
+    model.add_layer(MaxPooling2DLayer())
+    model.add_layer(FlattenLayer())
+    model.add_layer(DenseLayer(32, 'sigmoid'))
     model.add_layer(DenseLayer(10, 'sigmoid'))
 
     model.train(training_data, epochs=3, mini_batch_size=10, learning_rate=3.0, test_data=test_data)

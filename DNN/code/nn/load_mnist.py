@@ -16,7 +16,7 @@ def vector_shape_data(data):
 
 
 def matrix_shape_data(data):
-    features = [np.reshape(x, (28, 28)) for x in data[0]]
+    features = [np.reshape(x, (1, 28, 28)) for x in data[0]]
     labels = [encode_label(y) for y in data[1]]
     return list(zip(features, labels))
 
