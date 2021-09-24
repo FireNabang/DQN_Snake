@@ -70,7 +70,6 @@ class SequentialNetwork:
         self.input_layer.input = _input
         temp_layer = self.input_layer
         while True:
-            print('check')
             if temp_layer is None:
                 break
             temp_layer.feed_forward()
