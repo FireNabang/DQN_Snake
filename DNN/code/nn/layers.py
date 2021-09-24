@@ -2,6 +2,26 @@ import numpy as np
 from nn.functions import activations
 
 
+def conv2D(src, kernel, stride=1):
+    # kernel = np.flipud(np.fliplr(kernel))
+
+    kernel_height, kernel_width = kernel.shape
+    src_height, src_width = src.shape
+    output_width = ((src_width - kernel_width) // stride) + 1
+    output_height = ((src_height - kernel_height) // stride) + 1
+    output = np.zeros((output_height, output_width))
+
+    for n in range(src_height - kernel_height + 1):
+        if n % stride == 0:
+            for m in range(src_width - kernel_width + 1):
+                try:
+                    if m % stride == 0:
+                        output[n, m] = (kernel * src[n: n + kernel_height, m: m + kernel_width]).sum()
+                except:
+                    break
+
+    return output.transpose()
+
 class Layer(object):
     def __init__(self, _activations='none'):
         self.params = []
@@ -76,9 +96,8 @@ class DenseLayer(Layer):
         data = self.get_input()
         accumulated_delta = self.get_accumulated_delta()
         activate_diff = self.get_activate_diff(data)
-        # print(accumulated_delta)
 
-        if self.next_layer is None and (accumulated_delta.shape != activate_diff.shape) :
+        if self.next_layer is None and (accumulated_delta.shape != activate_diff.shape):
             delta = np.dot(activate_diff.transpose(), accumulated_delta)
         else:
             delta = accumulated_delta * activate_diff
@@ -107,7 +126,7 @@ class DenseLayer(Layer):
 
 
 class Conv2DLayer (Layer):
-    def __init__(self, filter_count=1, filter_size=(0, 0), pad=1, activations='none', stride=1, input_size=(1, 1, 1)):
+    def __init__(self, filter_count=1, filter_size=(0, 0), pad=0, activations='none', stride=1, input_size=(1, 1, 1)):
         super(Conv2DLayer, self).__init__(activations)
         self.stride = stride
 
@@ -127,24 +146,18 @@ class Conv2DLayer (Layer):
         self.bias = np.array([np.random.randn(1, 1) for _ in range(self.filter_count)], dtype=np.float128)
         self.params = [self.filter, self.bias]
 
-        self.delta_filter = np.zeros(self.filter.shape)
-        self.delta_input = None
+        self.delta_filter = np.zeros(self.filter.shape, dtype=np.float128)
 
         self.input = None
         self.output = None
 
     def get_input(self):
         if self.previous_layer is not None:
-            print(self.previous_layer.output.shape)
             img = [np.pad(output, ((self.pad, self.pad), (self.pad, self.pad)), 'constant',constant_values = (0)) for output in self.previous_layer.output]
-            result = np.array([np.zeros((self.input_height, self.input_height)) for _ in range(self.channel)], dtype=np.float128)
-            for pre_output_ch in range(self.previous_layer.channel):
-                for filter_cnt in range(self.filter_count):
-                    for m in range(0, self.input_width - self.filter_width, self.stride):
-                        for n in range(0, self.input_height - self.filter_height, self.stride):
-                            print(pre_output_ch * self.filter_count + filter_cnt)
-                            result[pre_output_ch * self.filter_count + filter_cnt][n:n+self.filter_height, m:m+self.filter_width] += self.filter[filter_cnt] * img[pre_output_ch][n:n+self.filter_height, m:m+self.filter_width] + self.bias[filter_cnt]
-
+            result = []
+            for src in img:
+                for kernel in self.filter:
+                    result.append(conv2D(src, kernel, self.stride))
             return result
         else:
             return np.array(self.input, dtype=np.float128)
@@ -153,29 +166,30 @@ class Conv2DLayer (Layer):
         self.input = self.get_input()
         self.output = self.activation_function.get_activate(self.input)
         self.output_height, self.output_width = self.output[0].shape
-        print(self.output.shape)
 
     def backpropagation(self):
         accumulated_delta = self.get_accumulated_delta()
         _input = self.previous_layer.output
-        for out_ch in range(0, self.channel, self.channel):
-            for ch in range(self.channel):
-                for n in range((self.previous_layer.output_height - self.output_height) // self.stride + 1):
-                    for m in range((self.previous_layer.output_width - self.output_width) // self.stride + 1):
-                        self.delta_filter[out_ch // self.channel][n:n+self.filter_height, m:m+self.filter_width] += _input[out_ch // self.channel][n:n+self.filter_height, m:m+self.filter_width] * accumulated_delta[out_ch + ch]
 
-        for out_ch in range(0, self.channel, self.channel):
-            for ch in range(self.filter_count):
-                self.delta_input[out_ch // self.filter_count] = np.rot90(self.filter[out_ch // self.filter_count], 2) * accumulated_delta[out_ch + ch]
+        for out_ch in range(0, self.channel, self.filter_count):
+            for fc in range(self.filter_count):
+                self.delta_filter += conv2D(_input[out_ch // self.filter_count], accumulated_delta[out_ch + fc])
 
-        self.accumulated_delta = self.delta_input
+        delta_input = np.zeros(self.previous_layer.output.shape, dtype=np.float128)
+        for fc in range(self.filter_count):
+            for pre_ch in range(self.channel // self.filter_count):
+                pad_h = self.filter_height - 1
+                pad_w = self.filter_width - 1
+                img = np.pad(accumulated_delta[pre_ch + fc], ((pad_h, pad_h), (pad_w, pad_w)), 'constant',constant_values = (0))
+                temp = conv2D(img, np.rot90(self.filter[fc], 2))
+                delta_input[pre_ch] += temp
+        self.accumulated_delta = delta_input
 
     def update(self, learning_rate):
         self.filter -= learning_rate * self.delta_filter
 
     def clear_deltas(self):
-        self.delta_filter = np.zeros(self.filter.shape)
-        self.delta_input = np.zeros(self.previous_layer.output)
+        self.delta_filter = np.zeros(self.filter.shape, dtype=np.float128)
 
     def connect(self, layer):
         super(Conv2DLayer, self).connect(layer)
@@ -184,8 +198,7 @@ class Conv2DLayer (Layer):
         self.output_height = self.input_height
         self.output_width = self.input_width
         self.channel = layer.channel * self.filter_count
-        self.delta_input = np.zeros(self.previous_layer.output)
-        
+
 
 # Conv -> Fully Connected Layer
 
@@ -225,9 +238,10 @@ class MaxPooling2DLayer(Layer):
         accumulated_delta = self.get_accumulated_delta()
         delta = np.zeros(self.previous_layer.output.shape,dtype = np.float128)
         temp = self.previous_layer.output
+
         for ch in range(self.channel):
-            for n in range(self.input_height):
-                for m in range(self.input_width):
+            for n in range(0, self.input_height - self.pool_height):
+                for m in range(0, self.input_width - self.pool_width):
                     M = max([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)])
                     for i in range(self.pool_height):
                         for j in range(self.pool_width):
@@ -307,7 +321,7 @@ class AvgPooling2DLayer(Layer):
     def connect(self, layer):
         super(AvgPooling2DLayer, self).connect(layer)
         self.input_height = (self.previous_layer.output_height - self.pool_height) + 1
-        self.input_width = (self.previous_layer.output_width - self.pool_widht) + 1
+        self.input_width = (self.previous_layer.output_width - self.pool_width) + 1
         self.output_height = self.input_height
         self.output_width = self.input_width
         self.channel = self.previous_layer.channel
@@ -331,7 +345,7 @@ class FlattenLayer(Layer):
 
     def backpropagation(self):
         accumulated_delta = self.get_accumulated_delta()
-        self.accumulated_delta = accumulated_delta.reshape(self.input.reshape)
+        self.accumulated_delta = accumulated_delta.reshape(self.input.shape)
 
     def update(self, learning_rate):
         pass
