@@ -8,6 +8,7 @@ def sigmoid(z):
 
 
 def sigmoid_diff(z):
+    z = np.array(z, dtype=np.float128)
     return np.multiply(sigmoid(z), np.subtract(1, sigmoid(z)))
 
 
@@ -17,14 +18,29 @@ def none(z):
 
 
 def ReLU(z):
-    mz = [max(x, 0) for x in z]
-    result = np.array(mz, dtype=np.float128)
-    return result.reshape(z.shape)
+    z = np.array(z, dtype=np.float128)
+    try:
+        result = [max(x, 0) for x in z]
+    except:
+        result = np.zeros(z.shape)
+        for ch in range(z.shape[0]):
+            for n in range(z.shape[1]):
+                for m in range(z.shape[2]):
+                    result[ch][n][m] = max(z[ch][n][m],0)
+    return result
 
 
 def ReLU_diff(z):
-    result = np.array([int(x > 0) for x in z], dtype=np.float128)
-    return result.reshape(z.shape)
+    z = np.array(z, dtype=np.float128)
+    try:
+        result = np.array([int(x > 0) for x in z], dtype=np.float128)
+    except:
+        result = np.zeros(z.shape)
+        for ch in range(z.shape[0]):
+            for n in range(z.shape[1]):
+                for m in range(z.shape[2]):
+                    result[ch][n][m] = int(z[ch][n][m]>0)
+    return result
 
 
 def tanh(z):

@@ -28,4 +28,4 @@ def load_data(shape='vector'):
         train_data, validation_data, test_data = data.load()
     if(shape == 'vector'):
         return vector_shape_data(train_data), vector_shape_data(test_data)
-    return matrix_shape_data(train_data), matrix_shape_data(test_data)
+    return matrix_shape_data(train_data)[:1000], matrix_shape_data(test_data)
