@@ -75,6 +75,17 @@ class SequentialNetwork:
             temp_layer.feed_forward()
             temp_layer = temp_layer.next_layer
         return self.output_layer.output
+    
+    
+    def summary(self):
+        temp_layer = self.input_layer
+        print("{0:<20} | {1:<20}".format('Layer','Output Shape'))
+        print("-------------------------------------------")
+        while True:
+            if temp_layer is None:
+                break
+            print('{0:<20} | {1:<20}'.format(temp_layer.__class__.__name__, str(temp_layer.get_shape())))
+            temp_layer = temp_layer.next_layer
 
     def evaluate(self, test_data):
         test_results = [(

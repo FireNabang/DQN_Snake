@@ -69,6 +69,9 @@ class Layer(object):
     def connect(self, layer):
         self.previous_layer = layer
         layer.next_layer = self
+        
+    def get_shape(self):
+        raise NotImplementedError
 
 
 class DenseLayer(Layer):
@@ -125,6 +128,9 @@ class DenseLayer(Layer):
 
         self.delta_w = np.zeros(self.weight.shape)
         self.delta_b = np.zeros(self.bias.shape)
+    
+    def get_shape(self):
+        return (self.dim ,1)
 
 
 class Conv2DLayer (Layer):
@@ -140,7 +146,7 @@ class Conv2DLayer (Layer):
         self.height = input_size[0]
         self.width = input_size[1]
 
-        self.channel = input_size[2] * filter_count
+        self.channel = filter_count
 
         self.filter = np.array([np.random.randn(self.filter_height, self.filter_width) for _ in range(self.filter_count)], dtype=np.float128)
         self.bias = np.array([np.random.randn(1, 1) for _ in range(self.filter_count)], dtype=np.float128)
@@ -150,17 +156,22 @@ class Conv2DLayer (Layer):
 
         self.input = None
         self.output = None
+        
+    def get_shape(self):
+        return (self.channel , self.height, self.width)
 
     def get_input(self):
-        result = []
         if self.previous_layer is not None:
-            img = [np.pad(_input, ((self.pad, self.pad), (self.pad, self.pad)), 'constant',constant_values = (0)) for _input in self.previous_layer.output]
-        else:
-            img = [np.pad(_input, ((self.pad, self.pad), (self.pad, self.pad)), 'constant',constant_values = (0)) for _input in self.input]
-        for src in img:
+            img = [np.pad(output, ((self.pad, self.pad), (self.pad, self.pad)), 'constant',constant_values = (0)) for output in self.previous_layer.output]
+            result = []
             for kernel in self.filter:
-                result.append(conv2D(src, kernel, self.stride))
-        return result
+                temp = np.zeros((self.height, self.width), dtype=np.float128)
+                for src in img:
+                    temp += conv2D(src, kernel, self.stride)
+                result.append(temp)
+            return np.array(result, dtype=np.float128)
+        else:
+            return np.array(self.input, dtype=np.float128)
 
     def feed_forward(self):
         self.input = self.get_input()
@@ -172,18 +183,17 @@ class Conv2DLayer (Layer):
         _input = self.previous_layer.output
 
         accumulated_delta = accumulated_delta * self.activation_function.get_activate_diff(self.input)
-        for out_ch in range(0, self.channel, self.filter_count):
-            for fc in range(self.filter_count):
-                self.delta_filter += conv2D(_input[out_ch // self.filter_count], accumulated_delta[out_ch + fc])
+        for ch in range(self.channel):
+            for _input in self.previous_layer.output:
+                self.delta_filter[ch] += conv2D(_input, accumulated_delta[ch])
 
         delta_input = np.zeros(self.previous_layer.output.shape, dtype=np.float128)
-        for fc in range(self.filter_count):
-            for pre_ch in range(self.channel // self.filter_count):
+        for pre_ch in range(self.previous_layer.channel):
+            for ac_delta in accumulated_delta:
                 pad_h = self.filter_height - 1
                 pad_w = self.filter_width - 1
-                img = np.pad(accumulated_delta[pre_ch + fc], ((pad_h, pad_h), (pad_w, pad_w)), 'constant',constant_values = (0))
-                temp = conv2D(img, np.rot90(self.filter[fc], 2))
-                delta_input[pre_ch] += temp
+                img = np.pad(ac_delta, ((pad_h, pad_h), (pad_w, pad_w)), 'constant',constant_values = (0))
+                delta_input[pre_ch] += conv2D(img, np.rot90(self.filter[ch], 2))
         self.accumulated_delta = delta_input
 
     def update(self, learning_rate):
@@ -196,23 +206,26 @@ class Conv2DLayer (Layer):
         super(Conv2DLayer, self).connect(layer)
         self.height = (self.previous_layer.height + 2 * self.pad - self.filter_height ) // self.stride + 1
         self.width = (self.previous_layer.width + 2 * self.pad - self.filter_width) // self.stride + 1
-        self.channel = layer.channel * self.filter_count
-
+        self.channel = self.filter_count
 
 
 class MaxPooling2DLayer(Layer):
-    def __init__(self, pool_size=(2, 2), activations='none'):
+    def __init__(self, pool_size=(2, 2), stride=1, activations='none'):
 
         super(MaxPooling2DLayer, self).__init__(activations)
         self.pool_size = pool_size
         self.pool_height = pool_size[0]
         self.pool_width = pool_size[1]
+        self.stride = stride
 
         self.height = None
         self.width = None
 
         self.channel = None
-
+        
+    def get_shape(self):
+        return (self.channel , self.height, self.width)
+        
     def get_input(self):
         if self.previous_layer is not None:
             temp = self.previous_layer.output
@@ -253,23 +266,27 @@ class MaxPooling2DLayer(Layer):
 
     def connect(self, layer):
         super(MaxPooling2DLayer, self).connect(layer)
-        self.height = (self.previous_layer.height - self.pool_height) + 1
-        self.width = (self.previous_layer.width - self.pool_width) + 1
+        self.height = (self.previous_layer.height - self.pool_height)  // self.stride + 1
+        self.width = (self.previous_layer.width - self.pool_width)  // self.stride + 1
         self.channel = self.previous_layer.channel
 
 
 class AvgPooling2DLayer(Layer):
-    def __init__(self, pool_size=(2, 2), activations='none'):
+    def __init__(self, pool_size=(2, 2), stride=1, activations='none'):
 
         super(AvgPooling2DLayer, self).__init__(activations)
         self.pool_size = pool_size
         self.pool_height = pool_size[0]
         self.pool_width = pool_size[1]
+        self.stride = stride
 
         self.height = None
         self.width = None
 
         self.channel = None
+
+    def get_shape(self):
+        return (self.channel , self.height, self.width)
 
     def get_input(self):
         if self.previous_layer is not None:
@@ -311,8 +328,8 @@ class AvgPooling2DLayer(Layer):
 
     def connect(self, layer):
         super(AvgPooling2DLayer, self).connect(layer)
-        self.height = (self.previous_layer.height - self.pool_height) + 1
-        self.width = (self.previous_layer.width - self.pool_width) + 1
+        self.height = (self.previous_layer.height - self.pool_height)  // self.stride + 1
+        self.width = (self.previous_layer.width - self.pool_width)  // self.stride + 1
         self.channel = self.previous_layer.channel
 
 
@@ -321,6 +338,8 @@ class FlattenLayer(Layer):
         super(FlattenLayer, self).__init__(activations)
         self.dim = dim
 
+    def get_shape(self):
+        return (self.dim , 1)
     def get_input(self):
         if self.previous_layer is not None:
             return self.previous_layer.output

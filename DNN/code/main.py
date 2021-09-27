@@ -15,7 +15,9 @@ def main():
     model.add_layer(FlattenLayer())
     model.add_layer(DenseLayer(32, 'sigmoid'))
     model.add_layer(DenseLayer(10, 'sigmoid'))
+    
 
+    model.summary()
     model.train(training_data, epochs=3, mini_batch_size=32, learning_rate=3.0, test_data=test_data)
 
 
