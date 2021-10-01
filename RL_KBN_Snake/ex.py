@@ -7,7 +7,7 @@ h = 10
 unit = 20
 fx = 8
 fy = 8
-qmap = [[0 for y in range(w)] for x in range(h)]
+qmap = [[[] for y in range(w)] for x in range(h)]
 map = [[0 for y in range(w)] for x in range(h)]
 
 ##every coordinate's order is y and then x
