@@ -29,15 +29,16 @@ class Snake:
         ## set initial direction
         self.dir=Direction.RIGHT.value
     ## change position
-    def move(self):
-        ## change position by adding unit vector * velocity:30
-        last = self.position[-1]
-        self.position[0]+=numpy.array(self.dir)
-        for n, body in enumerate(self.position[1:]):
-            print(n, body)
+    def move(self):        
+        self.position = [self.position[0]+numpy.array(self.dir), self.position[0], self.position[1]]
+
+        for p in self.position:
+            if len(list(filter(lambda x: self.position[x][0] == p[0] and self.position[x][1] == p[1], range(len(self.position))))) > 1 :
+                self.living = False
+            
 
         if self.position[0][0] == fy and self.position[0][1] == fx :
-            self.position.append(last)
+            ##self.position.append(last)
             self.__init__()
 
     def changeDirection(self, type: Direction):
