@@ -20,10 +20,7 @@ class Direction(Enum):
     RIGHT=(0, 1)
 
 def checkSameList(a, b):
-    for n, v in a:
-        if v != b[n]:
-            return False
-    return True
+    return a[0] == b[0] and a[1] == b[1]
 
 ## Snake Object
 class Snake:
@@ -59,14 +56,16 @@ class Snake:
             ## check same case existing
             index = -1
             for n, c in enumerate(qmap[hy][hx]):
-                if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and checkSameList(c["direction"], self.dir):
+                if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
                     index = n
             
             if index == -1:
                 self.insertCase(hy, hx)
             else :
                 ## 여기에 랜덤 방향 만들어야함
-                qmap[hy][hx][index]["value"]
+                possible = [ k for k, v in qmap[hy][hx][index]["value"].items() if v>=0]
+                random.shuffle(possible)
+                self.dir = possible[0]
 
     ## change position
     def move(self):
@@ -82,6 +81,11 @@ class Snake:
             self.writeMyPosition()
         else :
             self.deleteMyPosition()
+            hy = self.position[0][0]
+            hx = self.position[0][1]
+            for c in qmap[hy][hx]:
+                if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and checkSameList(c["direction"], self.dir):
+                    c["value"][self.dir] = -1
             self.__init__()
             
     def writeMyPosition(self):
