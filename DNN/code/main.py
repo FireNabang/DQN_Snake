@@ -4,7 +4,7 @@ from nn.layers import DenseLayer, Conv2DLayer, MaxPooling2DLayer, FlattenLayer
 
 
 def main():
-    training_data, test_data = load_mnist.load_data(train_data_cnt=5000, test_data_cnt=100, shape='matrix')
+    training_data, test_data = load_mnist.load_data(train_data_cnt=5000, test_data_cnt=1000, shape='matrix')
     model = network.SequentialNetwork()
     model.add_layer(Conv2DLayer(input_size=(28, 28, 1)))
     model.add_layer(Conv2DLayer(filter_count=5, filter_size=(3, 3)))
