@@ -17,6 +17,10 @@ def none(z):
     return z
 
 
+def none_diff(z):
+    result = np.ones(z.shape, dtype=np.float32)
+    return result
+
 def ReLU(z):
     z = np.array(z, dtype=np.float32)
     try:
@@ -76,7 +80,7 @@ activations = {
 }
 
 activations_diff = {
-    'none': none,
+    'none': none_diff,
     'sigmoid': sigmoid_diff,
     'tanh': tanh_diff,
     'relu': ReLU_diff,
