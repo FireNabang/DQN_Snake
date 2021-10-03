@@ -69,7 +69,7 @@ class Layer(object):
     def connect(self, layer):
         self.previous_layer = layer
         layer.next_layer = self
-        
+
     def get_shape(self):
         raise NotImplementedError
 
@@ -91,7 +91,7 @@ class DenseLayer(Layer):
         if self.previous_layer is not None:
             return np.dot(self.weight, self.previous_layer.output) + self.bias
         else:
-            return np.array(self.input, dtype=np.float128)
+            return np.array(self.input, dtype=np.float32)
 
     def feed_forward(self):
         self.input = self.get_input()
@@ -114,6 +114,7 @@ class DenseLayer(Layer):
     def update(self, learning_rate):
         self.weight -= learning_rate * self.delta_w
         self.bias -= learning_rate * self.delta_b
+        self.params = [self.weight, self.bias]
 
     def clear_deltas(self):
         self.delta_w = np.zeros(self.weight.shape)
@@ -128,7 +129,7 @@ class DenseLayer(Layer):
 
         self.delta_w = np.zeros(self.weight.shape)
         self.delta_b = np.zeros(self.bias.shape)
-    
+
     def get_shape(self):
         return (self.dim ,1)
 
@@ -148,15 +149,15 @@ class Conv2DLayer (Layer):
 
         self.channel = filter_count
 
-        self.filter = np.array([np.random.randn(self.filter_height, self.filter_width) for _ in range(self.filter_count)], dtype=np.float128)
-        self.bias = np.array([np.random.randn(1, 1) for _ in range(self.filter_count)], dtype=np.float128)
+        self.filter = np.array([np.random.randn(self.filter_height, self.filter_width) for _ in range(self.filter_count)], dtype=np.float32)
+        self.bias = np.array([np.random.randn(1, 1) for _ in range(self.filter_count)], dtype=np.float32)
         self.params = [self.filter, self.bias]
 
-        self.delta_filter = np.zeros(self.filter.shape, dtype=np.float128)
+        self.delta_filter = np.zeros(self.filter.shape, dtype=np.float32)
 
         self.input = None
         self.output = None
-        
+
     def get_shape(self):
         return (self.channel , self.height, self.width)
 
@@ -165,13 +166,13 @@ class Conv2DLayer (Layer):
             img = [np.pad(output, ((self.pad, self.pad), (self.pad, self.pad)), 'constant',constant_values = (0)) for output in self.previous_layer.output]
             result = []
             for kernel in self.filter:
-                temp = np.zeros((self.height, self.width), dtype=np.float128)
+                temp = np.zeros((self.height, self.width), dtype=np.float32)
                 for src in img:
                     temp += conv2D(src, kernel, self.stride)
                 result.append(temp)
-            return np.array(result, dtype=np.float128)
+            return np.array(result, dtype=np.float32)
         else:
-            return np.array(self.input, dtype=np.float128)
+            return np.array(self.input, dtype=np.float32)
 
     def feed_forward(self):
         self.input = self.get_input()
@@ -183,11 +184,12 @@ class Conv2DLayer (Layer):
         _input = self.previous_layer.output
 
         accumulated_delta = accumulated_delta * self.activation_function.get_activate_diff(self.input)
+
         for ch in range(self.channel):
             for _input in self.previous_layer.output:
                 self.delta_filter[ch] += conv2D(_input, accumulated_delta[ch])
 
-        delta_input = np.zeros(self.previous_layer.output.shape, dtype=np.float128)
+        delta_input = np.zeros(self.previous_layer.output.shape, dtype=np.float32)
         for pre_ch in range(self.previous_layer.channel):
             for ac_delta in accumulated_delta:
                 pad_h = self.filter_height - 1
@@ -198,9 +200,10 @@ class Conv2DLayer (Layer):
 
     def update(self, learning_rate):
         self.filter -= learning_rate * self.delta_filter
+        self.params = [self.filter, self.bias]
 
     def clear_deltas(self):
-        self.delta_filter = np.zeros(self.filter.shape, dtype=np.float128)
+        self.delta_filter = np.zeros(self.filter.shape, dtype=np.float32)
 
     def connect(self, layer):
         super(Conv2DLayer, self).connect(layer)
@@ -222,14 +225,16 @@ class MaxPooling2DLayer(Layer):
         self.width = None
 
         self.channel = None
-        
+
+        self.params = None
+
     def get_shape(self):
         return (self.channel , self.height, self.width)
-        
+
     def get_input(self):
         if self.previous_layer is not None:
             temp = self.previous_layer.output
-            result = np.zeros((self.channel, self.height, self.width),dtype = np.float128)
+            result = np.zeros((self.channel, self.height, self.width),dtype = np.float32)
             for pre_output_ch in range(self.previous_layer.channel):
                 for m in range(self.width):
                     for n in range(self.height):
@@ -244,7 +249,7 @@ class MaxPooling2DLayer(Layer):
 
     def backpropagation(self):
         accumulated_delta = self.get_accumulated_delta()
-        delta = np.zeros(self.previous_layer.output.shape,dtype = np.float128)
+        delta = np.zeros(self.previous_layer.output.shape,dtype = np.float32)
         temp = self.previous_layer.output
 
         for ch in range(self.channel):
@@ -284,6 +289,7 @@ class AvgPooling2DLayer(Layer):
         self.width = None
 
         self.channel = None
+        self.params = None
 
     def get_shape(self):
         return (self.channel , self.height, self.width)
@@ -291,7 +297,7 @@ class AvgPooling2DLayer(Layer):
     def get_input(self):
         if self.previous_layer is not None:
             temp = self.previous_layer.output
-            result = np.zeros((self.channel, self.height, self.width), dtype = np.float128)
+            result = np.zeros((self.channel, self.height, self.width), dtype = np.float32)
             for pre_output_ch in range(self.previous_layer.channel):
                 for m in range(self.width):
                     for n in range(self.height):
@@ -306,7 +312,7 @@ class AvgPooling2DLayer(Layer):
 
     def backpropagation(self):
         accumulated_delta = self.get_accumulated_delta()
-        delta = np.zeros(self.previous_layer.output.shape,dtype = np.float128)
+        delta = np.zeros(self.previous_layer.output.shape,dtype = np.float32)
 
         temp = self.previous_layer.output
         for ch in range(self.channel):
@@ -337,9 +343,11 @@ class FlattenLayer(Layer):
     def __init__(self, dim=None, activations='none'):
         super(FlattenLayer, self).__init__(activations)
         self.dim = dim
+        self.params = None
 
     def get_shape(self):
-        return (self.dim , 1)
+        return (self.dim, 1)
+    
     def get_input(self):
         if self.previous_layer is not None:
             return self.previous_layer.output
@@ -387,7 +395,7 @@ class FlattenLayer(Layer):
 
 #     def backpropagation(self):
 #         accumulated_delta = self.get_accumulated_delta()
-#         delta = np.zeros(self.previous_layer.output.shape,dtype = np.float128)
+#         delta = np.zeros(self.previous_layer.output.shape,dtype = np.float32)
 #         temp = self.previous_layer.output
 #         self.accumulated_delta = delta
 

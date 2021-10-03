@@ -2,23 +2,23 @@ import numpy as np
 
 
 def sigmoid(z):
-    z = np.array(z, dtype=np.float128)
-    z = np.clip(z, -709.78, 709.78)
+    z = np.array(z, dtype=np.float32)
+    z = np.clip(z, -88.72, 88.72)
     return np.reciprocal(np.add(1.0, np.exp(-z)))
 
 
 def sigmoid_diff(z):
-    z = np.array(z, dtype=np.float128)
+    z = np.array(z, dtype=np.float32)
     return np.multiply(sigmoid(z), np.subtract(1, sigmoid(z)))
 
 
 def none(z):
-    z = np.array(z, dtype=np.float128)
+    z = np.array(z, dtype=np.float32)
     return z
 
 
 def ReLU(z):
-    z = np.array(z, dtype=np.float128)
+    z = np.array(z, dtype=np.float32)
     try:
         result = [max(x, 0) for x in z]
     except:
@@ -31,9 +31,9 @@ def ReLU(z):
 
 
 def ReLU_diff(z):
-    z = np.array(z, dtype=np.float128)
+    z = np.array(z, dtype=np.float32)
     try:
-        result = np.array([int(x > 0) for x in z], dtype=np.float128)
+        result = np.array([int(x > 0) for x in z], dtype=np.float32)
     except:
         result = np.zeros(z.shape)
         for ch in range(z.shape[0]):
@@ -52,15 +52,15 @@ def tanh_diff(z):
 
 
 def soft_max(z):
-    z = np.array(z, dtype=np.float128)
-    z = np.clip(z, -709.78, 709.78)
+    z = np.array(z, dtype=np.float32)
+    z = np.clip(z, -88.72, 88.72)
     e = np.exp(z)
-    return e / np.sum(e, dtype=np.float128)
+    return e / np.sum(e, dtype=np.float32)
 
 
 def soft_max_diff(z):
     s = soft_max(z)
-    result = np.ones((len(s), len(s)), dtype=np.float128)
+    result = np.ones((len(s), len(s)), dtype=np.float32)
     for i in range(len(s)):
         for j in range(len(s)):
             result[i][j] = s[i] * (int(i == j) - s[j])
