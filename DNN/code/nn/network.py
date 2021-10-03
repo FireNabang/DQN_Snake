@@ -1,10 +1,12 @@
 import random
 import numpy as np
+import h5py
 from nn.functions import loss
 
 
 class SequentialNetwork:
     def __init__(self, _loss=None):
+        self.model_loaded = False
         self.input_layer = None
         if _loss is None:
             self.loss = loss.Loss('mse')
@@ -75,17 +77,50 @@ class SequentialNetwork:
             temp_layer.feed_forward()
             temp_layer = temp_layer.next_layer
         return self.output_layer.output
-    
-    
+
     def summary(self):
         temp_layer = self.input_layer
-        print("{0:<20} | {1:<20}".format('Layer','Output Shape'))
+        print("{0:<20} | {1:<20}".format('Layer', 'Output Shape'))
         print("-------------------------------------------")
         while True:
             if temp_layer is None:
                 break
             print('{0:<20} | {1:<20}'.format(temp_layer.__class__.__name__, str(temp_layer.get_shape())))
             temp_layer = temp_layer.next_layer
+            
+    def save_model(self, file='model'):
+        f = h5py.File(file + '.hdf5', 'w')
+        idx = 0
+        temp_layer = self.input_layer
+        while True:
+            idx += 1
+            if temp_layer is None:
+                break
+            if temp_layer.params is None :
+                temp_layer = temp_layer.next_layer
+                continue
+            f.create_dataset(name='Layer'+str(idx), shape = temp_layer.params[0].shape, dtype = np.float32, data = temp_layer.params[0].astype(np.float32))
+            temp_layer = temp_layer.next_layer
+        f.close()
+
+    def load_model(self, file='model'):
+        try:
+            f = h5py.File(file + '.hdf5', 'r')
+        except:
+            return
+        idx = 0
+        temp_layer = self.input_layer
+        while True:
+            idx += 1
+            if temp_layer is None:
+                break
+            if 'Layer'+str(idx) in f.keys() :
+                temp_layer.params[0] = np.array(f.get('Layer'+str(idx))[:] , dtype = np.float32)
+            temp_layer = temp_layer.next_layer
+        f.close()
+        self.model_loaded = True
+        print('model is loaded')
+        
 
     def evaluate(self, test_data):
         test_results = [(
