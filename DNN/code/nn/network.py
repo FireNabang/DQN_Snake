@@ -48,7 +48,7 @@ class SequentialNetwork:
         learning_rate = learning_rate / len(mini_batch)
         temp_layer = self.output_layer
         while True:
-            temp_layer.update(learning_rate)
+            temp_layer.update(learning_rate, len(mini_batch))
             temp_layer = temp_layer.previous_layer
             if temp_layer is self.input_layer:
                 break
@@ -87,7 +87,7 @@ class SequentialNetwork:
                 break
             print('{0:<20} | {1:<20}'.format(temp_layer.__class__.__name__, str(temp_layer.get_shape())))
             temp_layer = temp_layer.next_layer
-            
+
     def save_model(self, file='model'):
         f = h5py.File(file + '.hdf5', 'w')
         idx = 0

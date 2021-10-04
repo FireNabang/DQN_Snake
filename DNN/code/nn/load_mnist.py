@@ -29,5 +29,5 @@ def load_data(train_data_cnt=50000, test_data_cnt=10000, shape='vector'):
     train_data_cnt = min(train_data_cnt, 50000)
     test_data_cnt = min(test_data_cnt, 10000)
     if(shape == 'vector'):
-        return vector_shape_data(train_data)[:train_data_cnt], vector_shape_data(test_data)[:train_data_cnt]
-    return matrix_shape_data(train_data)[:test_data_cnt], matrix_shape_data(test_data)[:test_data_cnt]
+        return vector_shape_data(train_data)[:train_data_cnt], vector_shape_data(test_data)[:test_data_cnt]
+    return matrix_shape_data(train_data)[:train_data_cnt], matrix_shape_data(test_data)[:test_data_cnt]
