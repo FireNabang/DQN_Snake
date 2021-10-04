@@ -19,7 +19,6 @@ def conv2D(src, kernel, stride=1):
                         output[n, m] = (kernel * src[n: n + kernel_height, m: m + kernel_width]).sum()
                 except:
                     break
-
     return output.transpose()
 
 
@@ -63,7 +62,7 @@ class Layer(object):
     def clear_deltas(self):
         pass
 
-    def update(self, learning_rate):
+    def update(self, learning_rate, batch_size):
         pass
 
     def connect(self, layer):
@@ -111,9 +110,9 @@ class DenseLayer(Layer):
         self.delta_w += np.dot(delta, self.previous_layer.output.transpose())
         self.accumulated_delta = np.dot(self.weight.transpose(), delta)
 
-    def update(self, learning_rate):
-        self.weight -= learning_rate * self.delta_w
-        self.bias -= learning_rate * self.delta_b
+    def update(self, learning_rate, batch_size):
+        self.weight -= learning_rate * self.delta_w / batch_size
+        self.bias -= learning_rate * self.delta_b / batch_size
         self.params = [self.weight, self.bias]
 
     def clear_deltas(self):
@@ -153,18 +152,19 @@ class Conv2DLayer (Layer):
         self.bias = np.array([np.random.randn(1, 1) for _ in range(self.filter_count)], dtype=np.float32)
         self.params = [self.filter, self.bias]
 
-        self.delta_filter = np.zeros(self.filter.shape, dtype=np.float32)
+        self.delta_filter = None
+        self.delta_X = None
 
         self.input = None
         self.output = None
 
     def get_shape(self):
-        return (self.channel , self.height, self.width)
+        return (self.channel, self.height, self.width)
 
     def get_input(self):
         if self.previous_layer is not None:
-            img = [np.pad(output, ((self.pad, self.pad), (self.pad, self.pad)), 'constant',constant_values = (0)) for output in self.previous_layer.output]
             result = []
+            img = [np.pad(output, ((self.pad, self.pad), (self.pad, self.pad)), 'constant',constant_values = (0)) for output in self.previous_layer.output]
             for kernel in self.filter:
                 temp = np.zeros((self.height, self.width), dtype=np.float32)
                 for src in img:
@@ -181,35 +181,38 @@ class Conv2DLayer (Layer):
 
     def backpropagation(self):
         accumulated_delta = self.get_accumulated_delta()
-        _input = self.previous_layer.output
-
         accumulated_delta = accumulated_delta * self.activation_function.get_activate_diff(self.input)
-
+        delta_input = np.zeros_like(self.delta_X)
         for ch in range(self.channel):
-            for _input in self.previous_layer.output:
-                self.delta_filter[ch] += conv2D(_input, accumulated_delta[ch])
+            for X in self.previous_layer.output:
+                self.delta_filter[ch] += conv2D(X, accumulated_delta[ch])
 
-        delta_input = np.zeros(self.previous_layer.output.shape, dtype=np.float32)
         for pre_ch in range(self.previous_layer.channel):
-            for ac_delta in accumulated_delta:
+            for idx in range(len(accumulated_delta)):
                 pad_h = self.filter_height - 1
                 pad_w = self.filter_width - 1
-                img = np.pad(ac_delta, ((pad_h, pad_h), (pad_w, pad_w)), 'constant',constant_values = (0))
-                delta_input[pre_ch] += conv2D(img, np.rot90(self.filter[ch], 2))
+                img = np.pad(accumulated_delta[idx], ((pad_h, pad_h), (pad_w, pad_w)), 'constant',constant_values = (0))
+                delta_input[pre_ch] += conv2D(img, np.rot90(self.filter[idx], 2))
+
+        self.delta_X += delta_input
         self.accumulated_delta = delta_input
 
-    def update(self, learning_rate):
-        self.filter -= learning_rate * self.delta_filter
+    def update(self, learning_rate, batch_size):
+        self.filter -= learning_rate * self.delta_filter / batch_size
         self.params = [self.filter, self.bias]
 
     def clear_deltas(self):
-        self.delta_filter = np.zeros(self.filter.shape, dtype=np.float32)
+        self.delta_filter = np.zeros_like(self.delta_filter)
+        self.delta_X = np.zeros_like(self.delta_X)
+
 
     def connect(self, layer):
         super(Conv2DLayer, self).connect(layer)
         self.height = (self.previous_layer.height + 2 * self.pad - self.filter_height ) // self.stride + 1
         self.width = (self.previous_layer.width + 2 * self.pad - self.filter_width) // self.stride + 1
         self.channel = self.filter_count
+        self.delta_filter = np.zeros_like(self.filter)
+        self.delta_X = np.zeros((self.previous_layer.channel, self.previous_layer.height, self.previous_layer.width))
 
 
 class MaxPooling2DLayer(Layer):
@@ -229,16 +232,16 @@ class MaxPooling2DLayer(Layer):
         self.params = None
 
     def get_shape(self):
-        return (self.channel , self.height, self.width)
+        return (self.channel, self.height, self.width)
 
     def get_input(self):
         if self.previous_layer is not None:
-            temp = self.previous_layer.output
             result = np.zeros((self.channel, self.height, self.width),dtype = np.float32)
-            for pre_output_ch in range(self.previous_layer.channel):
+            temp = self.previous_layer.output
+            for ch in range(self.channel):
                 for m in range(self.width):
                     for n in range(self.height):
-                        result[pre_output_ch][n][m] += max([temp[pre_output_ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)])
+                        result[ch][n][m] = max([temp[ch][n*self.stride + i][m*self.stride + j] for i in range(self.pool_height) for j in range(self.pool_width)])
             return result
         else:
             return self.input
@@ -253,17 +256,17 @@ class MaxPooling2DLayer(Layer):
         temp = self.previous_layer.output
 
         for ch in range(self.channel):
-            for n in range(0, self.height - self.pool_height):
-                for m in range(0, self.width - self.pool_width):
+            for n in range(0, self.previous_layer.height - self.pool_height,self.stride):
+                for m in range(0, self.previous_layer.width - self.pool_width,self.stride):
                     M = max([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)])
                     for i in range(self.pool_height):
                         for j in range(self.pool_width):
                             if self.input[ch][n + i][m + j] == M:
-                                delta[ch][n + i][m + j] += accumulated_delta[ch][n][m]
+                                delta[ch][n + i][m + j] = accumulated_delta[ch][n // self.stride][m // self.stride]
 
         self.accumulated_delta = delta
 
-    def update(self, learning_rate):
+    def update(self, learning_rate, batch_size):
         pass
 
     def clear_deltas(self):
@@ -292,16 +295,16 @@ class AvgPooling2DLayer(Layer):
         self.params = None
 
     def get_shape(self):
-        return (self.channel , self.height, self.width)
+        return (self.channel, self.height, self.width)
 
     def get_input(self):
         if self.previous_layer is not None:
             temp = self.previous_layer.output
             result = np.zeros((self.channel, self.height, self.width), dtype = np.float32)
-            for pre_output_ch in range(self.previous_layer.channel):
+            for ch in range(self.channel):
                 for m in range(self.width):
                     for n in range(self.height):
-                        result[pre_output_ch][n][m] += sum([temp[pre_output_ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)]) / (self.pool_height * self.pool_width)
+                        result[ch][n][m] += sum([temp[ch][n*self.stride + i][m*self.stride + j] for i in range(self.pool_height) for j in range(self.pool_width)]) / (self.pool_height * self.pool_width)
             return result
         else:
             return None
@@ -316,17 +319,16 @@ class AvgPooling2DLayer(Layer):
 
         temp = self.previous_layer.output
         for ch in range(self.channel):
-            for n in range(self.height):
-                for m in range(self.width):
-                    d = accumulated_delta[ch][n][m] * sum([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)]) / (self.pool_height * self.pool_width)
-                    delta[ch][n][m] += d
-                    delta[ch][n+1][m] += d
-                    delta[ch][n][m+1] += d
-                    delta[ch][n+1][m+1] += d
+            for n in range(0, self.previous_layer.height - self.pool_height,self.stride):
+                for m in range(0, self.previous_layer.width - self.pool_width,self.stride):
+                    d = accumulated_delta[ch][n][m] * sum([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)])
+                    for i in range(self.pool_height):
+                        for j in range(self.pool_width):
+                            delta[ch][n+i][m+j] += d
 
         self.accumulated_delta = delta
 
-    def update(self, learning_rate):
+    def update(self, learning_rate, batch_size):
         pass
 
     def clear_deltas(self):
@@ -347,7 +349,7 @@ class FlattenLayer(Layer):
 
     def get_shape(self):
         return (self.dim, 1)
-    
+
     def get_input(self):
         if self.previous_layer is not None:
             return self.previous_layer.output
@@ -362,7 +364,7 @@ class FlattenLayer(Layer):
         accumulated_delta = self.get_accumulated_delta()
         self.accumulated_delta = accumulated_delta.reshape(self.input.shape)
 
-    def update(self, learning_rate):
+    def update(self, learning_rate, batch_size):
         pass
 
     def clear_deltas(self):
@@ -399,7 +401,7 @@ class FlattenLayer(Layer):
 #         temp = self.previous_layer.output
 #         self.accumulated_delta = delta
 
-#     def update(self, learning_rate):
+#     def update(self, learning_rate, batch_size):
 #         pass
 
 #     def clear_deltas(self):
