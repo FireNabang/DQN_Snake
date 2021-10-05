@@ -222,7 +222,6 @@ class MaxPooling2DLayer(Layer):
         self.pool_size = pool_size
         self.pool_height = pool_size[0]
         self.pool_width = pool_size[1]
-        self.stride = stride
 
         self.height = None
         self.width = None
@@ -239,9 +238,9 @@ class MaxPooling2DLayer(Layer):
             result = np.zeros((self.channel, self.height, self.width),dtype = np.float32)
             temp = self.previous_layer.output
             for ch in range(self.channel):
-                for m in range(self.width):
-                    for n in range(self.height):
-                        result[ch][n][m] = max([temp[ch][n*self.stride + i][m*self.stride + j] for i in range(self.pool_height) for j in range(self.pool_width)])
+                for m in range(0, self.width, self.pool_width):
+                    for n in range(0, self.height, self.pool_height):
+                        result[ch][n][m] = max([temp[ch][n*self.pool_height + i][m*self.pool_width + j] for i in range(self.pool_height) for j in range(self.pool_width)])
             return result
         else:
             return self.input
@@ -256,13 +255,13 @@ class MaxPooling2DLayer(Layer):
         temp = self.previous_layer.output
 
         for ch in range(self.channel):
-            for n in range(0, self.previous_layer.height - self.pool_height,self.stride):
-                for m in range(0, self.previous_layer.width - self.pool_width,self.stride):
-                    M = max([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)])
+            for n in range(self.height):
+                for m in range(self.width):
+                    M = max([temp[ch][n*self.pool_height + i][m*self.pool_width + j] for i in range(self.pool_height) for j in range(self.pool_width)])
                     for i in range(self.pool_height):
                         for j in range(self.pool_width):
-                            if self.input[ch][n + i][m + j] == M:
-                                delta[ch][n + i][m + j] = accumulated_delta[ch][n // self.stride][m // self.stride]
+                            if temp[ch][n + i][m + j] == M:
+                                delta[ch][n + i][m + j] = accumulated_delta[ch][n][m]
 
         self.accumulated_delta = delta
 
@@ -274,8 +273,8 @@ class MaxPooling2DLayer(Layer):
 
     def connect(self, layer):
         super(MaxPooling2DLayer, self).connect(layer)
-        self.height = (self.previous_layer.height - self.pool_height)  // self.stride + 1
-        self.width = (self.previous_layer.width - self.pool_width)  // self.stride + 1
+        self.height = (self.previous_layer.height - self.pool_height)  // self.pool_height + 1
+        self.width = (self.previous_layer.width - self.pool_width)  // self.pool_width + 1
         self.channel = self.previous_layer.channel
 
 
@@ -299,12 +298,12 @@ class AvgPooling2DLayer(Layer):
 
     def get_input(self):
         if self.previous_layer is not None:
+            result = np.zeros((self.channel, self.height, self.width),dtype = np.float32)
             temp = self.previous_layer.output
-            result = np.zeros((self.channel, self.height, self.width), dtype = np.float32)
             for ch in range(self.channel):
-                for m in range(self.width):
-                    for n in range(self.height):
-                        result[ch][n][m] += sum([temp[ch][n*self.stride + i][m*self.stride + j] for i in range(self.pool_height) for j in range(self.pool_width)]) / (self.pool_height * self.pool_width)
+                for m in range(0, self.width, self.pool_width):
+                    for n in range(0, self.height, self.pool_height):
+                        result[ch][n][m] = sum([temp[ch][n*self.stride + i][m*self.stride + j] for i in range(self.pool_height) for j in range(self.pool_width)]) / (self.pool_height * self.pool_width)
             return result
         else:
             return None
@@ -321,10 +320,11 @@ class AvgPooling2DLayer(Layer):
         for ch in range(self.channel):
             for n in range(0, self.previous_layer.height - self.pool_height,self.stride):
                 for m in range(0, self.previous_layer.width - self.pool_width,self.stride):
-                    d = accumulated_delta[ch][n][m] * sum([temp[ch][n + i][m + j] for i in range(self.pool_height) for j in range(self.pool_width)])
+                    d = accumulated_delta[ch][n][m] * sum([temp[ch][n*self.pool_height + i][m*self.pool_width + j] for i in range(self.pool_height) for j in range(self.pool_width)])
                     for i in range(self.pool_height):
                         for j in range(self.pool_width):
                             delta[ch][n+i][m+j] += d
+
 
         self.accumulated_delta = delta
 
@@ -336,8 +336,8 @@ class AvgPooling2DLayer(Layer):
 
     def connect(self, layer):
         super(AvgPooling2DLayer, self).connect(layer)
-        self.height = (self.previous_layer.height - self.pool_height)  // self.stride + 1
-        self.width = (self.previous_layer.width - self.pool_width)  // self.stride + 1
+        self.height = (self.previous_layer.height - self.pool_height)  // self.pool_height + 1
+        self.width = (self.previous_layer.width - self.pool_width)  // self.pool_width + 1
         self.channel = self.previous_layer.channel
 
 
