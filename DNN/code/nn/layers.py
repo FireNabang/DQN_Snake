@@ -17,7 +17,7 @@ def conv2D(src, kernel, stride=1):
                 try:
                     if m % stride == 0:
                         output[n, m] = (kernel * src[n: n + kernel_height, m: m + kernel_width]).sum()
-                except:
+                except Exception:
                     break
     return output.transpose()
 
@@ -94,13 +94,12 @@ class DenseLayer(Layer):
 
     def feed_forward(self):
         self.input = self.get_input()
-        self.output = self.activation_function.get_activate(self.input)
+        self.output = self.activation_function.get_activate(self.input).reshape((self.dim,1))
 
     def backpropagation(self):
         data = self.get_input()
         accumulated_delta = self.get_accumulated_delta()
         activate_diff = self.get_activate_diff(data)
-
         if self.next_layer is None and (accumulated_delta.shape != activate_diff.shape):
             delta = np.dot(activate_diff.transpose(), accumulated_delta)
         else:
@@ -352,17 +351,17 @@ class FlattenLayer(Layer):
 
     def get_input(self):
         if self.previous_layer is not None:
-            return self.previous_layer.output
+            return self.previous_layer.output.reshape(self.previous_layer.width * self.previous_layer.height * self.previous_layer.channel, 1)
         else:
             return None
 
     def feed_forward(self):
         self.input = self.get_input()
-        self.output = self.input.reshape(self.previous_layer.width * self.previous_layer.height * self.previous_layer.channel, 1)
+        self.output = self.input
 
     def backpropagation(self):
         accumulated_delta = self.get_accumulated_delta()
-        self.accumulated_delta = accumulated_delta.reshape(self.input.shape)
+        self.accumulated_delta = accumulated_delta.reshape(self.previous_layer.output.shape)
 
     def update(self, learning_rate, batch_size):
         pass
@@ -375,42 +374,48 @@ class FlattenLayer(Layer):
         self.dim = self.previous_layer.width * self.previous_layer.height * self.previous_layer.channel
 
 
-# class DropoutLayer(Layer):
-#     def __init__(self, ratio=0.1, activations='none'):
+class DropoutLayer(Layer):
+    def __init__(self, drop_prob=0.1, activations='none'):
 
-#         super(DropoutLayer, self).__init__(activations)
-#         self.ratio = ratio
-#         self.height = None
-#         self.width = None
-#         self.height = None
-#         self.width = None
+        super(DropoutLayer, self).__init__(activations)
+        self.drop_prob = drop_prob
+        self.height = None
+        self.width = None
+        self.channel = None
+        self.dim = None
+        self.mask = None
 
-#         self.channel = None
+    def get_shape(self):
+        if self.dim is None:
+            return (self.channel, self.height, self.width)
+        else:
+            return (self.dim, 1)
 
-#     def get_input(self):
-#         if self.previous_layer is not None:
-#             return self.previous_layer.output
+    def get_input(self):
+        if self.previous_layer is not None:
+            X = self.previous_layer.output
+            self.mask = np.random.uniform(0, 1, X.shape) > self.drop_prob
+            return self.mask * X
 
-#     def feed_forward(self):
-#         self.input = self.get_input()
-#         self.output = self.input
+    def feed_forward(self):
+        self.input = self.get_input()
+        self.output = self.input
 
-#     def backpropagation(self):
-#         accumulated_delta = self.get_accumulated_delta()
-#         delta = np.zeros(self.previous_layer.output.shape,dtype = np.float32)
-#         temp = self.previous_layer.output
-#         self.accumulated_delta = delta
+    def backpropagation(self):
+        accumulated_delta = self.get_accumulated_delta()
+        self.accumulated_delta = accumulated_delta * self.mask
 
-#     def update(self, learning_rate, batch_size):
-#         pass
+    def update(self, learning_rate, batch_size):
+        pass
 
-#     def clear_deltas(self):
-#         pass
+    def clear_deltas(self):
+        pass
 
-#     def connect(self, layer):
-#         super(MaxPooling2DLayer, self).connect(layer)
-#         self.height = self.previous_layer.height
-#         self.width = self.previous_layer.width
-#         self.height = self.height
-#         self.width = self.width
-#         self.channel = self.previous_layer.channel
+    def connect(self, layer):
+        super(DropoutLayer, self).connect(layer)
+        try:
+            self.height = self.previous_layer.height
+            self.width = self.previous_layer.width
+            self.channel = self.previous_layer.channel
+        except Exception:
+            self.dim = self.previous_layer.dim

@@ -24,7 +24,8 @@ def none_diff(z):
 def ReLU(z):
     z = np.array(z, dtype=np.float32)
     try:
-        result = [max(x, 0) for x in z]
+        result = np.array([max(x, 0) for x in z], dtype=np.float32)
+        return result.reshape((len(z),1))
     except:
         result = np.zeros(z.shape)
         for ch in range(z.shape[0]):
@@ -38,6 +39,7 @@ def ReLU_diff(z):
     z = np.array(z, dtype=np.float32)
     try:
         result = np.array([int(x > 0) for x in z], dtype=np.float32)
+        return result.reshape((len(z), 1))
     except:
         result = np.zeros(z.shape)
         for ch in range(z.shape[0]):
@@ -68,7 +70,7 @@ def soft_max_diff(z):
     for i in range(len(s)):
         for j in range(len(s)):
             result[i][j] = s[i] * (int(i == j) - s[j])
-    return result
+    return np.array(result, dtype=np.float32)
 
 
 activations = {
