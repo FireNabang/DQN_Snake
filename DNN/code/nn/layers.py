@@ -94,13 +94,12 @@ class DenseLayer(Layer):
 
     def feed_forward(self):
         self.input = self.get_input()
-        self.output = self.activation_function.get_activate(self.input)
+        self.output = self.activation_function.get_activate(self.input).reshape((self.dim,1))
 
     def backpropagation(self):
         data = self.get_input()
         accumulated_delta = self.get_accumulated_delta()
         activate_diff = self.get_activate_diff(data)
-
         if self.next_layer is None and (accumulated_delta.shape != activate_diff.shape):
             delta = np.dot(activate_diff.transpose(), accumulated_delta)
         else:
@@ -352,17 +351,17 @@ class FlattenLayer(Layer):
 
     def get_input(self):
         if self.previous_layer is not None:
-            return self.previous_layer.output
+            return self.previous_layer.output.reshape(self.previous_layer.width * self.previous_layer.height * self.previous_layer.channel, 1)
         else:
             return None
 
     def feed_forward(self):
         self.input = self.get_input()
-        self.output = self.input.reshape(self.previous_layer.width * self.previous_layer.height * self.previous_layer.channel, 1)
+        self.output = self.input
 
     def backpropagation(self):
         accumulated_delta = self.get_accumulated_delta()
-        self.accumulated_delta = accumulated_delta.reshape(self.input.shape)
+        self.accumulated_delta = accumulated_delta.reshape(self.previous_layer.output.shape)
 
     def update(self, learning_rate, batch_size):
         pass
@@ -396,7 +395,7 @@ class DropoutLayer(Layer):
         if self.previous_layer is not None:
             X = self.previous_layer.output
             self.mask = np.random.uniform(0, 1, X.shape) > self.drop_prob
-            return self.mask * X / (1.0 - self.drop_prob)
+            return self.mask * X
 
     def feed_forward(self):
         self.input = self.get_input()
