@@ -21,12 +21,13 @@ def none_diff(z):
     result = np.ones(z.shape, dtype=np.float32)
     return result
 
+
 def ReLU(z):
     z = np.array(z, dtype=np.float32)
     try:
         result = np.array([max(x, 0) for x in z], dtype=np.float32)
         return result.reshape((len(z),1))
-    except:
+    except Exception:
         result = np.zeros(z.shape)
         for ch in range(z.shape[0]):
             for n in range(z.shape[1]):
@@ -40,7 +41,7 @@ def ReLU_diff(z):
     try:
         result = np.array([int(x > 0) for x in z], dtype=np.float32)
         return result.reshape((len(z), 1))
-    except:
+    except Exception:
         result = np.zeros(z.shape)
         for ch in range(z.shape[0]):
             for n in range(z.shape[1]):
@@ -78,7 +79,7 @@ activations = {
     'sigmoid': sigmoid,
     'tanh': tanh,
     'relu': ReLU,
-    'softmax': soft_max
+    'soft_max': soft_max
 }
 
 activations_diff = {
@@ -86,7 +87,7 @@ activations_diff = {
     'sigmoid': sigmoid_diff,
     'tanh': tanh_diff,
     'relu': ReLU_diff,
-    'softmax': soft_max_diff
+    'soft_max': soft_max_diff
 }
 
 
