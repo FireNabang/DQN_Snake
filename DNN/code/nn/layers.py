@@ -86,6 +86,8 @@ class DenseLayer(Layer):
         self.delta_w = None
         self.delta_b = None
 
+        self.activation_function_name = activations
+
     def get_input(self):
         if self.previous_layer is not None:
             return np.dot(self.weight, self.previous_layer.output) + self.bias
@@ -100,7 +102,7 @@ class DenseLayer(Layer):
         data = self.get_input()
         accumulated_delta = self.get_accumulated_delta()
         activate_diff = self.get_activate_diff(data)
-        if self.next_layer is None and (accumulated_delta.shape != activate_diff.shape):
+        if self.activation_function_name == 'soft_max':
             delta = np.dot(activate_diff.transpose(), accumulated_delta)
         else:
             delta = accumulated_delta * activate_diff

@@ -90,8 +90,8 @@ class SequentialNetwork:
 
     def save_model(self, file='model'):
         f = h5py.File(file + '.hdf5', 'w')
-        idx = 0
-        temp_layer = self.input_layer
+        idx = 1
+        temp_layer = self.input_layer.next_layer
         while True:
             idx += 1
             if temp_layer is None:
