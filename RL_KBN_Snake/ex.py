@@ -22,15 +22,38 @@ class Direction(Enum):
 def checkSameList(a, b):
     return a[0] == b[0] and a[1] == b[1]
 
+def setFruitPosition(positions, dir):
+    global fy, fx
+    yable = list(range(0, h))
+    xable = list(range(0, w))
+    while True:
+        random.shuffle(yable)
+        random.shuffle(xable)
+        new_fy, new_fx = yable[0], xable[0]
+        flag = False
+        for p in positions:
+            if p[0] == new_fy and p[1] == new_fx:
+                flag = True
+        if flag:
+            continue
+        else :
+            dirValue = {Direction.UP.value: 3, Direction.RIGHT.value: 4, Direction.DOWN.value: 5, Direction.LEFT.value: 6}
+            map[fy][fx] = dirValue[dir]
+            fy, fx = new_fy, new_fx
+            map[fy][fx] = 1
+            print("끝")
+            break
+
 ## Snake Object
 class Snake:
     ## initialize
-    def __init__(self) :
+    def __init__(self, playType) :
         self.living = True
         ## set initial position: <0, 0>
         self.position=[numpy.array([0, 3]), numpy.array([0, 2]), numpy.array([0, 1])]
         ## set initial direction
         self.dir=Direction.RIGHT.value
+        self.playType = playType
 
     def insertCase(self, hy, hx):
         qmap[hy][hx].append({
@@ -69,24 +92,35 @@ class Snake:
 
     ## change position
     def move(self):
-        self.setDirection()
+        if self.playType == 2:
+            self.setDirection()
         ##make next position
         next_body = [self.position[0]+self.dir] +list([x for x in self.position[0:len(self.position)-1]])
+        now_tail = self.position[len(self.position)-1]
         ##make flag variable to check player living
         isLiving = self.checkCollision(next_body)
 
-        if isLiving:
+        if isLiving == 1:
             self.deleteMyPosition()
             self.position = next_body
             self.writeMyPosition()
+
+        elif isLiving == 2:
+            print("사과")
+            self.deleteMyPosition()
+            self.position = next_body + [numpy.array(now_tail)]
+            setFruitPosition(self.position, self.dir)
+            self.writeMyPosition()
+
         else :
             self.deleteMyPosition()
-            hy = self.position[0][0]
-            hx = self.position[0][1]
-            for c in qmap[hy][hx]:
-                if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and checkSameList(c["direction"], self.dir):
-                    c["value"][self.dir] = -1
-            self.__init__()
+            if self.playType == 2:
+                hy = self.position[0][0]
+                hx = self.position[0][1]
+                for c in qmap[hy][hx]:
+                    if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and checkSameList(c["direction"], self.dir):
+                        c["value"][self.dir] = -1
+            self.__init__(self.playType)
             
     def writeMyPosition(self):
         for n, p in enumerate(self.position):
@@ -102,16 +136,21 @@ class Snake:
     
     def checkCollision(self, nbody):
         if nbody[0][0] < 0 or nbody[0][1] < 0 or nbody[0][0] >= h or nbody[0][1] >= w :
-            return False
+            return 0
 
         for p in self.position[1:len(self.position)-1]:
             if p[0] == nbody[0][0] and p[1] == nbody[0][1]:
-                return False
+                return 0
         
-        return True
+        if nbody[0][0] == fy and nbody[0][1] == fx :
+            return 2
 
-    def changeDirection(self, type: Direction):
-        self.dir=type.value
+        return 1
+
+    def changeDirection(self, direction: Direction):
+        if self.playType==1:
+            self.dir=direction.value
+
 ##print map
 def printMap():
     print('\n'.join([''.join([str(j) for j in i]) for i in map]))
@@ -124,6 +163,7 @@ def update(player):
 
 ## execute all drawing function
 def draw(display, player):
+    map[fy][fx] = 1
     ##set player position into px, py 
     for part in player.position :
         py = part[0]*unit
@@ -134,10 +174,12 @@ def draw(display, player):
     pg.draw.rect(display, (255, 255, 0), [fx*unit, fy*unit, unit, unit], 0)
 
 if __name__ == "__main__":
+    choice = int(input("select playing type: 1. manual 2. auto"))
+    print(choice)
     ##initialize
     pg.init()
     map[fy][fx] = 1
-    snake = Snake()
+    snake = Snake(choice)
 
     ##set display width and height
     display = pg.display.set_mode([w*unit, h*unit])
@@ -151,6 +193,15 @@ if __name__ == "__main__":
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 snake.living = False
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_LEFT:
+                    snake.changeDirection(Direction.LEFT)
+                elif event.key == pg.K_RIGHT:
+                    snake.changeDirection(Direction.RIGHT)
+                elif event.key == pg.K_UP:
+                    snake.changeDirection(Direction.UP)
+                elif event.key == pg.K_DOWN:
+                    snake.changeDirection(Direction.DOWN)
 
         ##set fps
         clock.tick(8)
