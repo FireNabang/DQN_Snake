@@ -1,8 +1,9 @@
 import pygame as pg
 import numpy, random
 from enum import Enum
+from DQN.dqn_agent import DQNAgent
 
-w = 9
+w = 10
 h = 10
 unit = 50
 fx = 5
@@ -13,6 +14,7 @@ epsilon = 0.99
 epsilon_discount = 0.95
 learning_rate = 0.8
 discount_factor = 0.9
+
 
 
 ##every coordinate's order is y and then x
@@ -27,7 +29,6 @@ class Direction(Enum):
 
 def checkSameList(a, b):
     return a[0] == b[0] and a[1] == b[1]
-
 
 def setFruitPosition(positions, dir):
     global fy, fx
@@ -86,8 +87,7 @@ class Snake:
         index = -1
         for n, c in enumerate(qmap[hy][hx]):
             if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(
-                    c["tail"], self.position[len(self.position) - 1]) and checkSameList(c["apple"], [fy, fx]) and c[
-                "direction"] == self.dir:
+                    c["tail"], self.position[len(self.position) - 1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
                 index = n
 
         if index == -1:
@@ -114,23 +114,9 @@ class Snake:
         self.dir = possible[0]
 
     def updateQ_Value(self):
-        py, px = self.position[0][0], self.position[0][1]
-        for n, c in enumerate(qmap[py][px]):
-            if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(
-                    c["tail"], self.position[len(self.position) - 1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
-                c["value"][self.dir] = (1 - learning_rate) * c["value"][self.dir] + learning_rate * (
-                            map[py][px] + discount_factor * max(c["value"].values()))
-
+        pass
     def chooseQvalue(self):
-        py, px = self.position[0][0], self.position[0][1]
-        for n, c in enumerate(qmap[py][px]):
-            if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(
-                    c["tail"], self.position[len(self.position) - 1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
-                maxList = [k for k, v in c["value"].items() if max(c["value"].values()) == v]
-                print(maxList)
-                random.shuffle(maxList)
-                self.dir = maxList[0]
-                return
+        pass
 
     ## change position
     def move(self):
@@ -232,12 +218,18 @@ def draw(display, player):
 
 
 if __name__ == "__main__":
-    choice = int(input("select playing type: 1. manual 2. auto"))
+    agent = DQNAgent(field_size=(h,w),batch_size=32,learning_rate=0.9,discount_factor=0.8)
+    choice = 1#int(input("select playing type: 1. manual 2. auto"))
     print(choice)
     ##initialize
     pg.init()
     map[fy][fx] = 1
     snake = Snake(choice)
+
+    time = 0
+    TIME = 7
+
+    game_data = []
 
     ##set display width and height
     display = pg.display.set_mode([w * unit, h * unit])
@@ -248,6 +240,10 @@ if __name__ == "__main__":
     clock = pg.time.Clock()
 
     while snake.living:
+        time += 1
+        if time > TIME:
+            time = 0
+            game_data += [map]
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 snake.living = False
@@ -285,4 +281,6 @@ if __name__ == "__main__":
         display.fill((0, 0, 0))
 
     ## clear memory
+    numpy.save('./data', numpy.array(game_data))  # x_save.npy
+
     pg.quit()
