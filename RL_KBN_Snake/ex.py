@@ -101,9 +101,8 @@ class Snake:
                 qmap[hy][hx][index]["value"][p] = 1
                 self.dir = p
                 return
-            for body in self.position:
-                if body[0] == next_head[0] and body[1] == next_head[1]:
-                    inable.append(pn)
+            if self.position[1][0] == next_head[0] and self.position[1][1] == next_head[1]:
+                inable.append(pn)
         for x in inable:
             qmap[hy][hx][index]["value"][possible[x]] = -1
             del possible[x]
