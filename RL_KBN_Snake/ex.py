@@ -5,10 +5,13 @@ from enum import Enum
 w = 9
 h = 10
 unit = 20
-fx = 8
-fy = 8
+fx = 5
+fy = 5
 qmap = [[[] for y in range(w)] for x in range(h)]
 map = [[0 for y in range(w)] for x in range(h)]
+epsillon = 0.9
+discount_factor = 0.95
+
 
 ##every coordinate's order is y and then x
 
@@ -75,20 +78,45 @@ class Snake:
         if len(qmap[hy][hx])==0:
             self.insertCase(hy, hx)
         ##if it has a case or more
-        else :
-            ## check same case existing
-            index = -1
-            for n, c in enumerate(qmap[hy][hx]):
-                if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
-                    index = n
+        ## check same case existing
+        index = -1
+        for n, c in enumerate(qmap[hy][hx]):
+            if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
+                index = n
+        
+        if index == -1:
+            self.insertCase(hy, hx)
+
+        for k, v in qmap[hy][hx][index]["value"].items():
+            if v == 1:
+                self.dir = k
+                return
+        possible = [ k for k, v in qmap[hy][hx][index]["value"].items() if v>=0]
+        inable = []
+        for pn, p in enumerate(possible):
+            next_head = self.position[0] + p
+            print(possible, [fy, fx])
+            if next_head[0] == fy and next_head[1] == fx:
+                print("사과 근처", p, self.position)
+                qmap[hy][hx][index]["value"][p] = 1
+                self.dir = p
+                return
+            for body in self.position:
+                if body[0] == next_head[0] and body[1] == next_head[1]:
+                    inable.append(pn)
+        for x in inable:
+            qmap[hy][hx][index]["value"][possible[x]] = -1
+            del possible[x]
+        random.shuffle(possible)
+        self.dir = possible[0]
             
-            if index == -1:
-                self.insertCase(hy, hx)
-            else :
-                ## 여기에 랜덤 방향 만들어야함
-                possible = [ k for k, v in qmap[hy][hx][index]["value"].items() if v>=0]
-                random.shuffle(possible)
-                self.dir = possible[0]
+            
+
+    def updateQ(self, case):
+        if case == 1:
+            for n, c in enumerate(qmap[self.position[0][0]][self.position[0][1]]):
+                if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
+                    c["value"][self.dir] = 1
 
     ## change position
     def move(self):
@@ -106,10 +134,10 @@ class Snake:
             self.writeMyPosition()
 
         elif isLiving == 2:
-            print("사과")
             self.deleteMyPosition()
             self.position = next_body + [numpy.array(now_tail)]
-            setFruitPosition(self.position, self.dir)
+            if self.playType == 1:
+                setFruitPosition(self.position, self.dir)
             self.writeMyPosition()
 
         else :
