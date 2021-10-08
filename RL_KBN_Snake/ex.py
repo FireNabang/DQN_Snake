@@ -9,8 +9,10 @@ fx = 5
 fy = 5
 qmap = [[[] for y in range(w)] for x in range(h)]
 map = [[0 for y in range(w)] for x in range(h)]
-epsillon = 0.9
-discount_factor = 0.95
+epsilon = 0.99       
+epsilon_discount = 0.95
+learning_rate = 0.8
+discount_factor = 0.9
 
 
 ##every coordinate's order is y and then x
@@ -44,7 +46,6 @@ def setFruitPosition(positions, dir):
             map[fy][fx] = dirValue[dir]
             fy, fx = new_fy, new_fx
             map[fy][fx] = 1
-            print("끝")
             break
 
 ## Snake Object
@@ -95,9 +96,7 @@ class Snake:
         inable = []
         for pn, p in enumerate(possible):
             next_head = self.position[0] + p
-            print(possible, [fy, fx])
             if next_head[0] == fy and next_head[1] == fx:
-                print("사과 근처", p, self.position)
                 qmap[hy][hx][index]["value"][p] = 1
                 self.dir = p
                 return
@@ -108,19 +107,32 @@ class Snake:
             del possible[x]
         random.shuffle(possible)
         self.dir = possible[0]
-            
-            
+                
+    def updateQ_Value(self):
+        py, px = self.position[0][0], self.position[0][1]
+        for n, c in enumerate(qmap[py][px]):
+            if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
+                c["value"][self.dir] = (1-learning_rate)*c["value"][self.dir] + learning_rate*(map[py][px] + discount_factor * max(c["value"].values()))
+        
 
-    def updateQ(self, case):
-        if case == 1:
-            for n, c in enumerate(qmap[self.position[0][0]][self.position[0][1]]):
-                if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
-                    c["value"][self.dir] = 1
+    def chooseQvalue(self):
+        py, px = self.position[0][0], self.position[0][1]
+        for n, c in enumerate(qmap[py][px]):
+            if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and c["direction"] == self.dir:
+                maxList = [k for k,v in c["value"].items() if max(c["value"].values()) == v]
+                print(maxList)
+                random.shuffle(maxList)
+                self.dir = maxList[0]
+                return
 
     ## change position
     def move(self):
+        global epsilon
         if self.playType == 2:
-            self.setDirection()
+            if random.uniform(0, 1) < epsilon :
+                self.setDirection()
+            else :
+                self.chooseQvalue()
         ##make next position
         next_body = [self.position[0]+self.dir] +list([x for x in self.position[0:len(self.position)-1]])
         now_tail = self.position[len(self.position)-1]
@@ -131,6 +143,7 @@ class Snake:
             self.deleteMyPosition()
             self.position = next_body
             self.writeMyPosition()
+            self.updateQ_Value()
 
         elif isLiving == 2:
             self.deleteMyPosition()
@@ -138,6 +151,7 @@ class Snake:
             if self.playType == 1:
                 setFruitPosition(self.position, self.dir)
             self.writeMyPosition()
+            self.updateQ_Value()
 
         else :
             self.deleteMyPosition()
@@ -147,6 +161,8 @@ class Snake:
                 for c in qmap[hy][hx]:
                     if c["length"] == len(self.position) and checkSameList(c["head"], self.position[0]) and checkSameList(c["tail"], self.position[len(self.position)-1]) and checkSameList(c["apple"], [fy, fx]) and checkSameList(c["direction"], self.dir):
                         c["value"][self.dir] = -1
+            self.updateQ_Value()
+            epsilon *= epsilon_discount
             self.__init__(self.playType)
             
     def writeMyPosition(self):
