@@ -1,4 +1,4 @@
-import queue
+from queue import Queue
 import random
 import numpy as np
 from DNN.code.nn import network
@@ -15,7 +15,7 @@ class DQNAgent:
         self.model = self.create_model()
         self.model.summary()
 
-        self.game_data = queue(maxsize=65536)
+        self.game_data = Queue(maxsize=65536)
         self.target_update_counter = 0
 
     def create_model(self):
