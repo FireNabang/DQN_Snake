@@ -37,15 +37,15 @@ class Snake:
         self.setFruitPosition(self.position)
         self.epsilon = 0.99
         self.epsilon_discount = 0.95
-        self.agent = DQNAgent(field_size=(h+1,w+1),batch_size=32,learning_rate=0.9,discount_factor=0.8)
+        self.agent = DQNAgent(field_size=(h + 2,w + 2), batch_size=32,learning_rate=0.9,discount_factor=0.8)
 
     def printMap(self):
         print('\n'.join([''.join([str(j) for j in i]) for i in self.map]))
 
     def initMap(self):
-        self.map = [[-1 for y in range(w + 1)] for x in range(h + 1)]
-        for i in range(1, h):
-            for j in range(1, w):
+        self.map = [[-1 for y in range(w + 2)] for x in range(h + 2)]
+        for i in range(1, h+1):
+            for j in range(1, w+1):
                 self.map[i][j] = 0
 
     def setFruitPosition(self, positions):
@@ -75,7 +75,7 @@ class Snake:
         self.setFruitPosition(self.position)
 
     def setDirection(self):
-        possible = self.agent.get_q_values(np.array(self.map))
+        possible = self.agent.get_q_values(np.array(self.map))[0]
         if uniform(0, 1) < self.epsilon:
             self.dir_idx = choice(list(range(4)))
         else:
@@ -121,7 +121,6 @@ class Snake:
             self.writeMyPosition()
             next_state = self.map
             reward = -1
-            self.epsilon *= self.epsilon_discount
             self.re()
             live = 0
         self.agent.update_game_data(cur_state,action,reward,next_state,live)
@@ -190,6 +189,7 @@ if __name__ == "__main__":
 
         if f == freq:
             snake.agent.train()
+            snake.epsilon *= snake.epsilon_discount
             f = 0
 
     ## clear memory

@@ -1,16 +1,17 @@
 from collections import deque
 import random
 import numpy as np
-from DQN_Snake.DNN.code.nn import network
-from DQN_Snake.DNN.code.nn.layers import DenseLayer, Conv2DLayer, MaxPooling2DLayer, FlattenLayer,DropoutLayer
+from DNN.code.nn import network
+from DNN.code.nn.layers import DenseLayer, Conv2DLayer, MaxPooling2DLayer, FlattenLayer,DropoutLayer
 
 
 class DQNAgent:
-    def __init__(self, field_size, batch_size, learning_rate, discount_factor):
+    def __init__(self, field_size, batch_size, learning_rate, discount_factor, epochs):
         self.field_height, self.field_width = field_size
         self.batch_size = batch_size
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
+        self.epochs = epochs
 
         self.model_training = self.create_model()
         self.model = self.create_model()
@@ -58,8 +59,8 @@ class DQNAgent:
             current_q_values[i][action] = next_q_value
 
         #  model train
-        print("train_counter : " +str(self.train_counter))
-        self.model_training.train(list(zip(current_input, current_q_values)), epochs=1, mini_batch_size=self.batch_size, learning_rate=0.9)
+        print("train_counter : " + str(self.train_counter))
+        self.model_training.train(list(zip(current_input, current_q_values)), epochs=self.epochs, mini_batch_size=self.batch_size, learning_rate=0.9)
 
     def save(self, model_filepath):
         self.model.save_model(model_filepath)
