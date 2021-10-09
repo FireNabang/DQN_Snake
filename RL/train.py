@@ -75,17 +75,17 @@ class Snake:
 
         self.setFruitPosition(self.position)
 
-        def setDirection(self):
-            possible = self.agent.get_q_values(np.array(self.map))[0]
-            if uniform(0, 1) < self.epsilon:
-                temp = choice(list(range(4)))
-            else:
-                temp = np.argmax(possible)
-            if self.dir_idx == (temp + 2) % 4:
-                pass
-            else:
-                self.dir_idx = temp
-                self.dir = Directions[self.dir_idx]
+    def setDirection(self):
+        possible = self.agent.get_q_values(np.array(self.map))[0]
+        if uniform(0, 1) < self.epsilon:
+            temp = choice(list(range(4)))
+        else:
+            temp = np.argmax(possible)
+        if self.dir_idx == (temp + 2) % 4:
+            pass
+        else:
+            self.dir_idx = temp
+            self.dir = Directions[self.dir_idx]
 
     ## change position
     def move(self):
