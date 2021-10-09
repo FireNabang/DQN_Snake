@@ -22,7 +22,7 @@ class DQNAgent:
     def create_model(self):
         model = network.SequentialNetwork('categorical_crossentropy')
         model.add_layer(Conv2DLayer(input_size=(self.field_height,self.field_width,1)))
-        model.add_layer(Conv2DLayer(filter_count=8, filter_size=(3,3)))
+        model.add_layer(Conv2DLayer(filter_count=8,filter_size=(3,3)))
         model.add_layer(DropoutLayer(0.1))
         model.add_layer(Conv2DLayer(filter_count=8, filter_size=(3, 3)))
         model.add_layer(FlattenLayer())
@@ -58,7 +58,8 @@ class DQNAgent:
             current_q_values[i, action] = next_q_value
 
         #  model train
-        self.model_training.train(zip(np.array(current_input), np.array(current_q_values)), epochs=1, mini_batch_size=self.batch_size, learning_rate=0.9)
+        print("train_counter : " + self.train_counter)
+        self.model_training.train(zip(current_input, current_q_values), epochs=1, mini_batch_size=self.batch_size, learning_rate=0.9)
 
     def save(self, model_filepath):
         self.model.save_model(model_filepath)
