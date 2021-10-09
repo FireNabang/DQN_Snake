@@ -2,6 +2,7 @@ import numpy as np
 from random import randrange, uniform, choice, shuffle
 from enum import Enum
 from DQN.dqn_agent import DQNAgent
+import pygame as pg
 
 w = 10
 h = 10
@@ -11,20 +12,16 @@ unit = 50
 ## set direction vector
 class Direction(Enum):
     UP = (-1, 0)
+    RIGHT = (0, 1)
     DOWN = (1, 0)
     LEFT = (0, -1)
-    RIGHT = (0, 1)
 
 Directions = [
     Direction.UP.value,
+    Direction.RIGHT.value,
     Direction.DOWN.value,
-    Direction.LEFT.value,
-    Direction.DOWN.value
+    Direction.LEFT.value
 ]
-
-
-
-
 
 
 ## Snake Object
@@ -33,14 +30,17 @@ class Snake:
     def __init__(self):
         self.initMap()
         self.living = True
-        self.position = [np.array([0, 3]), np.array([0, 2]), np.array([0, 1])]
+        self.position = [np.array([2, 3])]
         self.dir = Direction.RIGHT.value
         self.dir_idx = 1
 
-        self.setFruitPosition(self.position, self.dir)
+        self.setFruitPosition(self.position)
         self.epsilon = 0.99
         self.epsilon_discount = 0.95
         self.agent = DQNAgent(field_size=(h+1,w+1),batch_size=32,learning_rate=0.9,discount_factor=0.8)
+
+    def printMap(self):
+        print('\n'.join([''.join([str(j) for j in i]) for i in self.map]))
 
     def initMap(self):
         self.map = [[-1 for y in range(w + 1)] for x in range(h + 1)]
@@ -48,7 +48,7 @@ class Snake:
             for j in range(1, w):
                 self.map[i][j] = 0
 
-    def setFruitPosition(self, positions, dir):
+    def setFruitPosition(self, positions):
         yable = list(range(1, h))
         xable = list(range(1, w))
         while True:
@@ -68,19 +68,22 @@ class Snake:
     def re(self):
         self.initMap()
         self.living = True
-        self.position = [np.array([1, 3]), np.array([1, 2]), np.array([1, 1])]
+        self.position = [np.array([2, 3])]
         self.dir = Direction.RIGHT.value
         self.dir_idx = 1
 
-        self.setFruitPosition(self.position, self.dir)
+        self.setFruitPosition(self.position)
 
     def setDirection(self):
-        possible = self.agent.get_q_values(self.map)
+        possible = self.agent.get_q_values(np.array(self.map))
         if uniform(0, 1) < self.epsilon:
             self.dir_idx = choice(list(range(4)))
         else:
             self.dir_idx = np.argmax(possible)
-        self.dir = Directions[self.dir_idx]
+        if self.dir == Directions[(self.dir_idx + 2) % 4]:
+            pass
+        else:
+            self.dir = Directions[self.dir_idx]
 
     ## change position
     def move(self):
@@ -105,7 +108,7 @@ class Snake:
         elif isLiving == 2:
             self.deleteMyPosition()
             self.position = next_body + [np.array(now_tail)]
-            self.setFruitPosition(self.position, self.dir)
+            self.setFruitPosition(self.position)
             self.writeMyPosition()
             next_state = self.map
             reward = len(self.position)
@@ -152,18 +155,39 @@ class Snake:
         return 1
 
 
-## update game data
-def update(player):
-    player.move()
+## execute all drawing function
+def draw(display, player : Snake):
+    for i in range(1,h):
+        for j in range(1,w):
+            py = i*unit
+            px = j*unit
+            if player.map[i][j] >= 2:
+                pg.draw.rect(display, (255, 255, 255), [px, py, unit, unit], 0)
+            elif player.map[i][j] == 1:
+                pg.draw.rect(display, (255, 255, 0), [px, py, unit, unit], 0)
+
 
 if __name__ == "__main__":
     snake = Snake()
     freq = 1000
     f = 0
-    while snake.agent.train_counter < 10:
+    display = pg.display.set_mode([w * unit, h * unit])
+    pg.display.set_caption("DQN Snake!")
+    clock = pg.time.Clock()
+    Flag = True
+    while Flag:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                Flag = False
+
+        clock.tick(32)
         f+=1
         snake.move()
-        update(snake)
+        draw(display, snake)
+        ## clear display
+        pg.display.flip()
+        display.fill((0, 0, 0))
+
         if f == freq:
             snake.agent.train()
             f = 0

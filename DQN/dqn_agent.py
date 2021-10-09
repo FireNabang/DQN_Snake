@@ -1,8 +1,8 @@
 from collections import deque
 import random
 import numpy as np
-from DNN.code.nn import network
-from DNN.code.nn.layers import DenseLayer, Conv2DLayer, MaxPooling2DLayer, FlattenLayer,DropoutLayer
+from DQN_Snake.DNN.code.nn import network
+from DQN_Snake.DNN.code.nn.layers import DenseLayer, Conv2DLayer, MaxPooling2DLayer, FlattenLayer,DropoutLayer
 
 
 class DQNAgent:
