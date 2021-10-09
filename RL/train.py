@@ -1,5 +1,5 @@
 import numpy as np
-from random import randrange, uniform, choice, shuffle
+from random import uniform, choice, shuffle
 from enum import Enum
 from DQN.dqn_agent import DQNAgent
 import pygame as pg
@@ -36,8 +36,9 @@ class Snake:
 
         self.setFruitPosition(self.position)
         self.epsilon = 0.99
-        self.epsilon_discount = 0.95
-        self.agent = DQNAgent(field_size=(h + 2,w + 2), batch_size=32,learning_rate=0.9,discount_factor=0.8)
+        self.epsilon_discount = 0.7
+        self.agent = DQNAgent(field_size=(h + 2,w + 2), batch_size=32,learning_rate=0.9,discount_factor=0.8,epochs=2)
+
 
     def printMap(self):
         print('\n'.join([''.join([str(j) for j in i]) for i in self.map]))
@@ -49,8 +50,8 @@ class Snake:
                 self.map[i][j] = 0
 
     def setFruitPosition(self, positions):
-        yable = list(range(1, h))
-        xable = list(range(1, w))
+        yable = list(range(1, h+1))
+        xable = list(range(1, w+1))
         while True:
             shuffle(yable)
             shuffle(xable)
@@ -74,16 +75,17 @@ class Snake:
 
         self.setFruitPosition(self.position)
 
-    def setDirection(self):
-        possible = self.agent.get_q_values(np.array(self.map))[0]
-        if uniform(0, 1) < self.epsilon:
-            self.dir_idx = choice(list(range(4)))
-        else:
-            self.dir_idx = np.argmax(possible)
-        if self.dir == Directions[(self.dir_idx + 2) % 4]:
-            pass
-        else:
-            self.dir = Directions[self.dir_idx]
+        def setDirection(self):
+            possible = self.agent.get_q_values(np.array(self.map))[0]
+            if uniform(0, 1) < self.epsilon:
+                temp = choice(list(range(4)))
+            else:
+                temp = np.argmax(possible)
+            if self.dir_idx == (temp + 2) % 4:
+                pass
+            else:
+                self.dir_idx = temp
+                self.dir = Directions[self.dir_idx]
 
     ## change position
     def move(self):
@@ -156,10 +158,10 @@ class Snake:
 
 ## execute all drawing function
 def draw(display, player : Snake):
-    for i in range(1,h):
-        for j in range(1,w):
-            py = i*unit
-            px = j*unit
+    for i in range(1, h+1):
+        for j in range(1, w+1):
+            py = (i - 1) * unit
+            px = (j - 1) * unit
             if player.map[i][j] >= 2:
                 pg.draw.rect(display, (255, 255, 255), [px, py, unit, unit], 0)
             elif player.map[i][j] == 1:
@@ -179,7 +181,7 @@ if __name__ == "__main__":
             if event.type == pg.QUIT:
                 Flag = False
 
-        clock.tick(32)
+        clock.tick(40)
         f+=1
         snake.move()
         draw(display, snake)

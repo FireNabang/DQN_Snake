@@ -1,5 +1,5 @@
 import numpy as np
-from nn.functions import activations
+from DNN.code.nn.functions import activations
 
 
 def conv2D(src, kernel, stride=1):

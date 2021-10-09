@@ -49,7 +49,6 @@ class DQNAgent:
 
         next_input = np.array([np.reshape(sample[3], (1, self.field_height,self.field_width)) for sample in samples])
         next_q_values = self.model.predict(next_input)
-        print(current_q_values)
         # update q values
         for i, (current_state, action, reward, _, live) in enumerate(samples):
             if live == 0:
