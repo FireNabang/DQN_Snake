@@ -121,17 +121,12 @@ class SequentialNetwork:
         self.model_loaded = True
         print('model is loaded')
 
-
     def evaluate(self, test_data):
         test_results = [(
             np.argmax(self.feed_forward(x)),
             np.argmax(y)
         ) for (x, y) in test_data]
         return sum(int(x == y) for (x, y) in test_results)
-    
-    
-    def predict(self, _input):
-        output = [(
-            np.argmax(self.feed_forward(x)),
-        ) for x in _input]
-        return output
+
+    def predict(self, x):
+        return self.feed_forward(x)
