@@ -1,8 +1,8 @@
-from queue import Queue
+from collections import deque
 import random
 import numpy as np
-from nn import network
-from nn.layers import DenseLayer, Conv2DLayer, FlattenLayer, DropoutLayer
+from DNN.code.nn import network
+from DNN.code.nn.layers import DenseLayer, Conv2DLayer, MaxPooling2DLayer, FlattenLayer,DropoutLayer
 
 
 class DQNAgent:
@@ -16,7 +16,7 @@ class DQNAgent:
         self.model = self.create_model()
         self.model.summary()
 
-        self.game_data = Queue(maxsize=65536)
+        self.game_data = deque(maxlen=65536)
         self.train_counter = 0
 
     def create_model(self):
@@ -32,10 +32,10 @@ class DQNAgent:
         return model
 
     def update_game_data(self, current_state, action, reward, next_state, live):
-        self.game_data.put((current_state, action, reward, next_state, live))
+        self.game_data.append((current_state, action, reward, next_state, live))
 
     def get_q_values(self, x):
-        return self.model.predict(np.reshape(x, (1, self.field_height, self.field_width)))
+        return self.model.predict(np.array([np.reshape(x, (1, self.field_height, self.field_width))]))
 
     def train(self):
         if len(self.game_data) < 512:
@@ -48,18 +48,18 @@ class DQNAgent:
 
         next_input = np.array([np.reshape(sample[3], (1, self.field_height,self.field_width)) for sample in samples])
         next_q_values = self.model.predict(next_input)
-
+        print(current_q_values)
         # update q values
         for i, (current_state, action, reward, _, live) in enumerate(samples):
             if live == 0:
                 next_q_value = reward
             else:
-                next_q_value = (1-self.learning_rate)*current_q_values[i, action] + self.learning_rate*(reward + self.discount_factor * np.max(next_q_values[i]))
-            current_q_values[i, action] = next_q_value
+                next_q_value = (1-self.learning_rate)*current_q_values[i][action] + self.learning_rate*(reward + self.discount_factor * np.max(next_q_values[i]))
+            current_q_values[i][action] = next_q_value
 
         #  model train
-        print("train_counter : " + self.train_counter)
-        self.model_training.train(zip(current_input, current_q_values), epochs=1, mini_batch_size=self.batch_size, learning_rate=0.9)
+        print("train_counter : " +str(self.train_counter))
+        self.model_training.train(list(zip(current_input, current_q_values)), epochs=1, mini_batch_size=self.batch_size, learning_rate=0.9)
 
     def save(self, model_filepath):
         self.model.save_model(model_filepath)

@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import h5py
-from nn.functions import loss
+from DNN.code.nn.functions import loss
 
 
 class SequentialNetwork:
@@ -121,12 +121,15 @@ class SequentialNetwork:
         self.model_loaded = True
         print('model is loaded')
 
+
     def evaluate(self, test_data):
         test_results = [(
             np.argmax(self.feed_forward(x)),
             np.argmax(y)
         ) for (x, y) in test_data]
         return sum(int(x == y) for (x, y) in test_results)
-
-    def predict(self, x):
-        return self.feed_forward(x)
+    
+    
+    def predict(self, _input):
+        output = [self.feed_forward(x) for x in _input]
+        return output

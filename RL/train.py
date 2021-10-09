@@ -23,6 +23,10 @@ Directions = [
 ]
 
 
+
+
+
+
 ## Snake Object
 class Snake:
     ## initialize
@@ -162,6 +166,8 @@ if __name__ == "__main__":
         update(snake)
         if f == freq:
             snake.agent.train()
+            f = 0
 
     ## clear memory
     snake.agent.model.save_model('test_model')
+    print('done')
