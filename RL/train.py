@@ -36,8 +36,8 @@ class Snake:
 
         self.setFruitPosition(self.position)
         self.epsilon = 0.99
-        self.epsilon_discount = 0.5
-        self.agent = DQNAgent(field_size=(h + 2,w + 2), batch_size=32,learning_rate=0.9,discount_factor=0.8,epochs=5,data_min_size=2048)
+        self.epsilon_discount = 0.9
+        self.agent = DQNAgent(field_size=(h + 2,w + 2), batch_size=32,learning_rate=1.2,discount_factor=0.8,epochs=10,data_min_size=5000)
         self.Q_value = None
 
     def printMap(self):
@@ -92,9 +92,9 @@ class Snake:
     def move(self):
         n_dir = self.setDirection()
 
-        next_body = [self.position[0] + self.dir[0]] + list([x for x in self.position[:-1]])
-        next_dir =  [n_dir] + list([x for x in self.dir[:-1]])
-        now_tail = self.position[len(self.position) - 1]
+        next_body = [self.position[0] + n_dir] + list([x for x in self.position[:-1]])
+        now_tail = self.position[-1]
+        dir_tail = self.dir[-1]
         isLiving = self.checkCollision(next_body[0])
 
         cur_state = np.array(self.map)
@@ -103,7 +103,7 @@ class Snake:
         if isLiving == 1:
             self.deleteMyPosition()
             self.position = next_body
-            self.dir = next_dir
+            self.dir = [n_dir] + list([x for x in self.dir[:-1]])
             self.writeMyPosition()
             next_state = np.array(self.map)
             live = 1
@@ -113,7 +113,7 @@ class Snake:
         elif isLiving == 2:
             self.deleteMyPosition()
             self.position = next_body + [np.array(now_tail)]
-            self.dir = next_dir + [self.dir[0]]
+            self.dir = [n_dir] + list([x for x in self.dir[:-1]]) + [dir_tail]
             self.setFruitPosition(self.position)
             self.writeMyPosition()
             next_state = self.map
@@ -123,8 +123,8 @@ class Snake:
         # 죽음
         else:
             self.deleteMyPosition()
-            self.position = next_body + [np.array(now_tail)]
-            self.dir = next_dir + [self.dir[0]]
+            self.position = next_body
+            self.dir = [n_dir] + list([x for x in self.dir[:-1]])
             self.writeMyPosition()
             next_state = self.map
             reward = -1
@@ -161,7 +161,6 @@ class Snake:
 
 ## execute all drawing function
 def draw(display, player : Snake):
-    print(player.Q_value)
     WHITE = (255, 255, 255)
     font = pg.font.SysFont("arial", 50, True, False)
     width = (w+2) * unit
@@ -198,13 +197,14 @@ def draw(display, player : Snake):
 if __name__ == "__main__":
     pg.init()
     snake = Snake()
-    freq = 3000
+    freq = 6000
     f = 0
     display = pg.display.set_mode([(w+2 +w +2 )  * unit, (h + 2) * unit])
     pg.display.set_caption("DQN Snake!")
     clock = pg.time.Clock()
     Flag = True
-    FES = 120
+    FES = 180
+    show = True
     while Flag:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -215,18 +215,23 @@ if __name__ == "__main__":
                     FES = max(10, FES)
                 elif event.key == pg.K_RIGHT:
                     FES += 10
-                    FES = min(150, FES)
+                    FES = min(180, FES)
+                elif event.key == pg.K_SPACE:
+                    show = (show != True)
                 # elif event.key == pg.K_UP:
                 #     snake.changeDirection(Direction.UP)
                 # elif event.key == pg.K_DOWN:
                 #     snake.changeDirection(Direction.DOWN)
-        clock.tick(FES)
         f+=1
         snake.move()
-        draw(display, snake)
-        ## clear display
-        pg.display.flip()
-        display.fill((0, 0, 0))
+        print(snake.Q_value)
+
+        if show:
+            clock.tick(FES)
+            draw(display, snake)
+            ## clear display
+            pg.display.flip()
+            display.fill((0, 0, 0))
 
         if f == freq:
             snake.agent.train()

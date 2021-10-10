@@ -18,14 +18,13 @@ class DQNAgent:
         self.model = self.create_model()
         self.model.summary()
 
-        self.game_data = deque(maxlen=65536)
+        self.game_data = deque(maxlen=(data_min_size*3 //2))
         self.train_counter = 0
 
     def create_model(self):
         model = network.SequentialNetwork()
         model.add_layer(Conv2DLayer(input_size=(self.field_height,self.field_width,1)))
         model.add_layer(Conv2DLayer(filter_count=16,filter_size=(2,2)))
-        model.add_layer(Conv2DLayer(filter_count=32, filter_size=(2, 2)))
         model.add_layer(FlattenLayer())
         model.add_layer(DenseLayer(128, activations='sigmoid'))
         model.add_layer(DenseLayer(4))
@@ -35,7 +34,7 @@ class DQNAgent:
         self.game_data.append((current_state, action, reward, next_state, live))
 
     def get_q_values(self, x):
-        return self.model.predict(np.array([np.reshape(x, (1, self.field_height, self.field_width))]) / 10.0)
+        return self.model.predict(np.array([np.reshape(x, (1, self.field_height, self.field_width))]) )
 
     def train(self):
         if len(self.game_data) < self.data_min_size:
@@ -43,10 +42,10 @@ class DQNAgent:
         self.train_counter += 1
         samples = random.sample(self.game_data, self.data_min_size)
 
-        current_input = np.array([np.reshape(sample[0], (1, self.field_height,self.field_width)) for sample in samples]) / 10.0
+        current_input = np.array([np.reshape(sample[0], (1, self.field_height,self.field_width)) for sample in samples])
         current_q_values = self.model.predict(current_input)
 
-        next_input = np.array([np.reshape(sample[3], (1, self.field_height,self.field_width)) for sample in samples]) / 10.0
+        next_input = np.array([np.reshape(sample[3], (1, self.field_height,self.field_width)) for sample in samples])
         next_q_values = self.model.predict(next_input)
         # update q values
         for i, (current_state, action, reward, _, live) in enumerate(samples):
