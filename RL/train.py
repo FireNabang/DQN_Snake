@@ -4,8 +4,8 @@ from enum import Enum
 from DQN.dqn_agent import DQNAgent
 import pygame as pg
 
-w = 10
-h = 10
+w = 5
+h = 5
 unit = 50
 
 
@@ -31,14 +31,14 @@ class Snake:
         self.initMap()
         self.living = True
         self.position = [np.array([2, 3])]
-        self.dir = Direction.RIGHT.value
+        self.dir = [Direction.RIGHT.value]
         self.dir_idx = 1
 
         self.setFruitPosition(self.position)
         self.epsilon = 0.99
-        self.epsilon_discount = 0.7
-        self.agent = DQNAgent(field_size=(h + 2,w + 2), batch_size=32,learning_rate=0.9,discount_factor=0.8,epochs=2)
-
+        self.epsilon_discount = 0.5
+        self.agent = DQNAgent(field_size=(h + 2,w + 2), batch_size=32,learning_rate=0.9,discount_factor=0.8,epochs=5,data_min_size=2048)
+        self.Q_value = None
 
     def printMap(self):
         print('\n'.join([''.join([str(j) for j in i]) for i in self.map]))
@@ -47,7 +47,7 @@ class Snake:
         self.map = [[-1 for y in range(w + 2)] for x in range(h + 2)]
         for i in range(1, h+1):
             for j in range(1, w+1):
-                self.map[i][j] = 0
+                self.map[i][j] = 1
 
     def setFruitPosition(self, positions):
         yable = list(range(1, h+1))
@@ -63,35 +63,37 @@ class Snake:
             if flag:
                 continue
             else:
-                self.map[new_fy][new_fx] = 1
+                self.map[new_fy][new_fx] = 10
                 break
 
     def re(self):
         self.initMap()
         self.living = True
         self.position = [np.array([2, 3])]
-        self.dir = Direction.RIGHT.value
+        self.dir = [Direction.RIGHT.value]
         self.dir_idx = 1
 
         self.setFruitPosition(self.position)
 
     def setDirection(self):
         possible = self.agent.get_q_values(np.array(self.map))[0]
+        self.Q_value = [q[0] for q in possible]
         if uniform(0, 1) < self.epsilon:
             temp = choice(list(range(4)))
         else:
-            temp = np.argmax(possible)
+            temp = self.Q_value.index(max(self.Q_value))
         if self.dir_idx == (temp + 2) % 4:
-            pass
+            return Directions[self.dir_idx]
         else:
             self.dir_idx = temp
-            self.dir = Directions[self.dir_idx]
+            return Directions[self.dir_idx]
 
     ## change position
     def move(self):
-        self.setDirection()
+        n_dir = self.setDirection()
 
-        next_body = [self.position[0] + self.dir] + list([x for x in self.position[0:len(self.position) - 1]])
+        next_body = [self.position[0] + self.dir[0]] + list([x for x in self.position[:-1]])
+        next_dir =  [n_dir] + list([x for x in self.dir[:-1]])
         now_tail = self.position[len(self.position) - 1]
         isLiving = self.checkCollision(next_body[0])
 
@@ -101,6 +103,7 @@ class Snake:
         if isLiving == 1:
             self.deleteMyPosition()
             self.position = next_body
+            self.dir = next_dir
             self.writeMyPosition()
             next_state = np.array(self.map)
             live = 1
@@ -110,6 +113,7 @@ class Snake:
         elif isLiving == 2:
             self.deleteMyPosition()
             self.position = next_body + [np.array(now_tail)]
+            self.dir = next_dir + [self.dir[0]]
             self.setFruitPosition(self.position)
             self.writeMyPosition()
             next_state = self.map
@@ -120,6 +124,7 @@ class Snake:
         else:
             self.deleteMyPosition()
             self.position = next_body + [np.array(now_tail)]
+            self.dir = next_dir + [self.dir[0]]
             self.writeMyPosition()
             next_state = self.map
             reward = -1
@@ -129,16 +134,14 @@ class Snake:
 
     def writeMyPosition(self):
         for n, p in enumerate(self.position):
-            if n == 0:
-                dirValue = {Direction.UP.value: 3, Direction.RIGHT.value: 4, Direction.DOWN.value: 5,
-                            Direction.LEFT.value: 6}
-                self.map[p[0]][p[1]] = dirValue[self.dir]
-            else:
-                self.map[p[0]][p[1]] = 2
+            dirValue = {Direction.UP.value: 3, Direction.RIGHT.value: 5, Direction.DOWN.value: 7,
+                        Direction.LEFT.value: 9}
+
+            self.map[p[0]][p[1]] = dirValue[self.dir[n]]
 
     def deleteMyPosition(self):
         for n, p in enumerate(self.position):
-            self.map[p[0]][p[1]] = 0
+            self.map[p[0]][p[1]] = 1
 
     def checkCollision(self, head):
 
@@ -151,37 +154,73 @@ class Snake:
             if p[0] == head[0] and p[1] == head[1]:
                 return 0
         # 사과
-        if self.map[head[0]][head[1]] == 1:
+        if self.map[head[0]][head[1]] == 10:
             return 2
         return 1
 
 
 ## execute all drawing function
 def draw(display, player : Snake):
-    for i in range(1, h+1):
-        for j in range(1, w+1):
-            py = (i - 1) * unit
-            px = (j - 1) * unit
-            if player.map[i][j] >= 2:
-                pg.draw.rect(display, (255, 255, 255), [px, py, unit, unit], 0)
-            elif player.map[i][j] == 1:
+    print(player.Q_value)
+    WHITE = (255, 255, 255)
+    font = pg.font.SysFont("arial", 50, True, False)
+    width = (w+2) * unit
+    height = (h+2) * unit
+    for idx,value in enumerate(player.Q_value):
+        text = font.render(str(round(value, 2)), True, WHITE)
+        text_rect = text.get_rect()
+        if idx == 0:
+            text_rect.centerx = width + width / 2
+            text_rect.top = 0
+        if idx == 1:
+            text_rect.right = 2 * width
+            text_rect.centery = height / 2
+        if idx == 2:
+            text_rect.centerx = width + width / 2
+            text_rect.bottom = height
+        if idx == 3:
+            text_rect.left = width
+            text_rect.centery = height / 2
+        display.blit(text, text_rect)
+    for i in range(h+2):
+        for j in range(w+2):
+            py = i * unit
+            px = j * unit
+            if player.map[i][j] == -1:
+                pg.draw.rect(display, (255, 0, 0), [px, py, unit, unit], 0)
+            elif player.map[i][j] == 10:
                 pg.draw.rect(display, (255, 255, 0), [px, py, unit, unit], 0)
+            elif player.map[i][j] >= 3:
+                pg.draw.rect(display, (25 * player.map[i][j], 25 * player.map[i][j], 25 * player.map[i][j]), [px, py, unit, unit], 0)
+    pg.draw.rect(display, (0, 255, 0), [player.position[0][1] * unit,player.position[0][0] * unit , unit, unit], 0)
 
 
 if __name__ == "__main__":
+    pg.init()
     snake = Snake()
-    freq = 1000
+    freq = 3000
     f = 0
-    display = pg.display.set_mode([w * unit, h * unit])
+    display = pg.display.set_mode([(w+2 +w +2 )  * unit, (h + 2) * unit])
     pg.display.set_caption("DQN Snake!")
     clock = pg.time.Clock()
     Flag = True
+    FES = 120
     while Flag:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 Flag = False
-
-        clock.tick(40)
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_LEFT:
+                    FES -= 10
+                    FES = max(10, FES)
+                elif event.key == pg.K_RIGHT:
+                    FES += 10
+                    FES = min(150, FES)
+                # elif event.key == pg.K_UP:
+                #     snake.changeDirection(Direction.UP)
+                # elif event.key == pg.K_DOWN:
+                #     snake.changeDirection(Direction.DOWN)
+        clock.tick(FES)
         f+=1
         snake.move()
         draw(display, snake)
@@ -195,5 +234,5 @@ if __name__ == "__main__":
             f = 0
 
     ## clear memory
-    snake.agent.model.save_model('test_model')
+    snake.agent.model.save_model('test_model2')
     print('done')
