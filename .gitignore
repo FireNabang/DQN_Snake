@@ -1,5 +1,5 @@
 goorm.manifest
 __pycache__
 
-/*.h5
-/*.hdf5
+
+*.hdf5

@@ -96,7 +96,7 @@ class SequentialNetwork:
             idx += 1
             if temp_layer is None:
                 break
-            if temp_layer.params is None:
+            if (temp_layer.params is None) or (len(temp_layer.params)==0):
                 temp_layer = temp_layer.next_layer
                 continue
             f.create_dataset(name='Layer'+str(idx), shape = temp_layer.params[0].shape, dtype = np.float32, data = temp_layer.params[0].astype(np.float32))
@@ -120,7 +120,7 @@ class SequentialNetwork:
         f.close()
         self.model_loaded = True
         print('model is loaded')
-        
+
 
     def evaluate(self, test_data):
         test_results = [(
@@ -128,3 +128,8 @@ class SequentialNetwork:
             np.argmax(y)
         ) for (x, y) in test_data]
         return sum(int(x == y) for (x, y) in test_results)
+    
+    
+    def predict(self, _input):
+        output = [self.feed_forward(x) for x in _input]
+        return output
