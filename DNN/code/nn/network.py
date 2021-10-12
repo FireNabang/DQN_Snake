@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import h5py
-from nn.functions import loss
+from DNN.code.nn.functions import loss
 
 
 class SequentialNetwork:
